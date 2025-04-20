@@ -13,7 +13,7 @@
 
 <script>
 export default {
-  name: 'Projects',
+  name: 'ProjectsPage',
   data() {
     return {
       // Project data would be loaded here

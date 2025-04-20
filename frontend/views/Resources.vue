@@ -13,7 +13,7 @@
 
 <script>
 export default {
-  name: 'Resources',
+  name: 'ResourcesPage',
   data() {
     return {
       // Resource data would be loaded here

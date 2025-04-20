@@ -2,18 +2,18 @@
   <div class="timesheets-container">
     <h1>Timesheets</h1>
     <div class="timesheet-controls">
-      <button class="primary-button">New Timesheet Entry</button>
-      <button class="secondary-button">Export Timesheets</button>
+      <button class="primary-button">New Timesheet</button>
+      <button class="secondary-button">View Pending</button>
     </div>
     <div class="timesheet-list">
-      <p>Your timesheet entries will appear here.</p>
+      <p>Your timesheets will appear here.</p>
     </div>
   </div>
 </template>
 
 <script>
 export default {
-  name: 'Timesheets',
+  name: 'TimesheetsPage',
   data() {
     return {
       // Timesheet data would be loaded here

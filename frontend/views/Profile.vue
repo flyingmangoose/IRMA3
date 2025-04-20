@@ -3,16 +3,12 @@
     <h1>User Profile</h1>
     <div class="profile-form">
       <div class="form-group">
-        <label>Full Name</label>
+        <label>Name</label>
         <input type="text" placeholder="Enter your name" />
       </div>
       <div class="form-group">
         <label>Email</label>
         <input type="email" placeholder="Enter your email" />
-      </div>
-      <div class="form-group">
-        <label>Role</label>
-        <input type="text" disabled value="Administrator" />
       </div>
       <div class="form-group">
         <label>Change Password</label>
@@ -25,7 +21,7 @@
 
 <script>
 export default {
-  name: 'Profile',
+  name: 'ProfilePage',
   data() {
     return {
       // Profile data would be loaded here

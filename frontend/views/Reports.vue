@@ -13,7 +13,7 @@
 
 <script>
 export default {
-  name: 'Reports',
+  name: 'ReportsPage',
   data() {
     return {
       // Report data would be loaded here

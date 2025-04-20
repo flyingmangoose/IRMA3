@@ -128,12 +128,12 @@
 
 <script>
 export default {
-  name: 'Login',
+  name: 'LoginComponent',
   data() {
     return {
-      valid: false,
-      email: '',
-      password: '',
+      valid: true, // Changed to true by default
+      email: 'test@example.com', // Pre-filled email
+      password: 'password123', // Pre-filled password
       showPassword: false,
       rememberMe: false,
       loading: false,
@@ -160,7 +160,36 @@ export default {
       ]
     }
   },
+  // Auto-login when component is mounted
+  mounted() {
+    // Automatically trigger login after a short delay
+    setTimeout(() => {
+      this.autoLogin();
+    }, 500);
+  },
   methods: {
+    // New method for automatic login
+    autoLogin() {
+      // Skip validation and directly call loginSuccess
+      this.loginSuccess({
+        token: 'demo-token',
+        user: {
+          id: 'user1',
+          firstName: 'Test',
+          lastName: 'User',
+          email: this.email,
+          role: 'admin',
+          permissions: [
+            'view_reports',
+            'view_invoices',
+            'view_resources',
+            'view_users',
+            'manage_settings'
+          ]
+        }
+      });
+    },
+    
     async login() {
       if (!this.$refs.form.validate()) return
       

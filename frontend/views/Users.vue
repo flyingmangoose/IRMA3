@@ -13,14 +13,14 @@
 
 <script>
 export default {
-  name: 'Users',
+  name: 'UsersPage',
   data() {
     return {
       // User data would be loaded here
     }
   },
   methods: {
-    // User management methods would go here
+    // User methods would go here
   }
 }
 </script>
