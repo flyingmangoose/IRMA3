@@ -128,7 +128,7 @@
 
 <script>
 export default {
-  name: 'Login',
+  name: 'LoginComponent',
   data() {
     return {
       valid: true, // Changed to true by default
