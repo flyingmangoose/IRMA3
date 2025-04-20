@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRMA Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Roboto', sans-serif;
+        }
+        .login-container {
+            max-width: 500px;
+            margin: 100px auto;
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .logo h1 {
+            font-size: 2.5rem;
+            color: #1976d2;
+            margin: 0;
+        }
+        .logo p {
+            color: #757575;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <div class="login-container">
+                <div class="logo">
+                    <h1>I.R.M.A.</h1>
+                    <p>Integrated Resource Management Application</p>
+                </div>
+                <v-card elevation="10" rounded="lg">
+                    <v-toolbar color="primary" dark flat>
+                        <v-toolbar-title>Login</v-toolbar-title>
+                    </v-toolbar>
+                    <v-card-text>
+                        <v-form>
+                            <v-text-field
+                                label="Email"
+                                prepend-icon="mdi-email"
+                                type="email"
+                                value="manager@example.com"
+                            ></v-text-field>
+                            <v-text-field
+                                label="Password"
+                                prepend-icon="mdi-lock"
+                                type="password"
+                                value="********"
+                                append-icon="mdi-eye-off"
+                            ></v-text-field>
+                            <v-checkbox
+                                label="Remember me"
+                            ></v-checkbox>
+                        </v-form>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn
+                            color="primary"
+                            large
+                        >
+                            Login
+                        </v-btn>
+                    </v-card-actions>
+                    <v-card-text class="text-center">
+                        <a href="#">Forgot password?</a>
+                    </v-card-text>
+                </v-card>
+            </div>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify({
+                theme: {
+                    themes: {
+                        light: {
+                            primary: '#1976D2',
+                            secondary: '#424242',
+                            accent: '#82B1FF',
+                            error: '#FF5252',
+                            info: '#2196F3',
+                            success: '#4CAF50',
+                            warning: '#FFC107'
+                        }
+                    }
+                }
+            })
+        })
+    </script>
+</body>
+</html>

@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRMA Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Roboto', sans-serif;
+        }
+        .dashboard-card {
+            margin-bottom: 20px;
+        }
+        .quick-action-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .quick-action-card:hover {
+            background-color: #f0f8ff;
+            transform: translateY(-5px);
+        }
+        .quick-action-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        .stat-label {
+            color: #757575;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <v-app-bar app color="primary" dark>
+                <v-app-bar-nav-icon></v-app-bar-nav-icon>
+                <v-toolbar-title>I.R.M.A.</v-toolbar-title>
+                <v-spacer></v-spacer>
+                <v-btn icon>
+                  <v-icon>mdi-bell</v-icon>
+                </v-btn>
+                <v-btn icon>
+                  <v-icon>mdi-account-circle</v-icon>
+                </v-btn>
+            </v-app-bar>
+
+            <v-navigation-drawer app>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-list-item-title class="text-h6">
+                            Integrated Resource Management Application
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                            Welcome, Manager User
+                        </v-list-item-subtitle>
+                    </v-list-item-content>
+                </v-list-item>
+
+                <v-divider></v-divider>
+
+                <v-list dense nav>
+                    <v-list-item link class="primary--text">
+                        <v-list-item-icon>
+                            <v-icon color="primary">mdi-home</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Home</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-calendar-clock</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Timesheets</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-folder</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Projects</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-group</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Clients</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-chart-bar</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Reports</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-file-document</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Invoices</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-multiple</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Resources</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>User Management</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Settings</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+                </v-list>
+            </v-navigation-drawer>
+
+            <v-main>
+                <v-container fluid>
+                    <v-card class="mb-6">
+                        <v-card-title class="primary white--text">
+                            Welcome, Manager User!
+                        </v-card-title>
+                        <v-card-subtitle class="pt-2">
+                            Friday, April 18, 2025
+                        </v-card-subtitle>
+                    </v-card>
+
+                    <h2 class="text-h5 mb-4">Quick Actions</h2>
+                    <v-row>
+                        <v-col cols="12" md="4">
+                            <v-card class="quick-action-card">
+                                <v-icon color="primary" class="quick-action-icon">mdi-clock-outline</v-icon>
+                                <div class="text-h6 mb-2">Review Timesheets</div>
+                                <div class="text-subtitle-2">1 pending approval</div>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-card class="quick-action-card">
+                                <v-icon color="success" class="quick-action-icon">mdi-folder-plus</v-icon>
+                                <div class="text-h6 mb-2">New Project</div>
+                                <div class="text-subtitle-2">Create a project</div>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-card class="quick-action-card">
+                                <v-icon color="info" class="quick-action-icon">mdi-chart-box</v-icon>
+                                <div class="text-h6 mb-2">Reports</div>
+                                <div class="text-subtitle-2">View analytics</div>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+
+                    <v-row class="mt-6">
+                        <v-col cols="12" md="8">
+                            <v-card class="dashboard-card">
+                                <v-card-title>
+                                    Pending Approvals
+                                    <v-spacer></v-spacer>
+                                    <v-btn text color="primary">View All</v-btn>
+                                </v-card-title>
+                                <v-data-table
+                                    :headers="[
+                                        { text: 'Employee', value: 'employee' },
+                                        { text: 'Submitted', value: 'submitted' },
+                                        { text: 'Hours', value: 'hours' },
+                                        { text: 'Status', value: 'status' },
+                                        { text: 'Actions', value: 'actions' }
+                                    ]"
+                                    :items="[
+                                        {
+                                            employee: 'John Smith',
+                                            submitted: '2025-04-18T19:46:26.185Z',
+                                            hours: 40,
+                                            status: 'Pending'
+                                        }
+                                    ]"
+                                    hide-default-footer
+                                >
+                                    <template v-slot:item.status="{ item }">
+                                        <v-chip color="warning" small>{{ item.status }}</v-chip>
+                                    </template>
+                                    <template v-slot:item.actions>
+                                        <v-btn small text color="primary">REVIEW</v-btn>
+                                    </template>
+                                </v-data-table>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-card class="dashboard-card">
+                                <v-card-title>Approval Summary</v-card-title>
+                                <v-card-text>
+                                    <div class="mb-4">
+                                        <div class="text-subtitle-1">Pending Approvals</div>
+                                        <div class="stat-value primary--text">1</div>
+                                        <div class="stat-label">timesheet</div>
+                                    </div>
+                                    <v-divider class="my-3"></v-divider>
+                                    <div>
+                                        <div class="text-subtitle-1">Approved This Week</div>
+                                        <div class="stat-value success--text">0</div>
+                                        <div class="stat-label">timesheets</div>
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+
+                    <v-row class="mt-4">
+                        <v-col cols="12" md="6">
+                            <v-card class="dashboard-card">
+                                <v-card-title>Project Status</v-card-title>
+                                <v-card-text>
+                                    <v-progress-circular
+                                        :rotate="360"
+                                        :size="100"
+                                        :width="15"
+                                        :value="75"
+                                        color="primary"
+                                        class="mb-3"
+                                    >
+                                        75%
+                                    </v-progress-circular>
+                                    <v-simple-table>
+                                        <template v-slot:default>
+                                            <thead>
+                                                <tr>
+                                                    <th>Project</th>
+                                                    <th>Status</th>
+                                                    <th>Progress</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Project Alpha</td>
+                                                    <td><v-chip color="success" small>Active</v-chip></td>
+                                                    <td>
+                                                        <v-progress-linear
+                                                            color="success"
+                                                            height="10"
+                                                            value="70"
+                                                            striped
+                                                        ></v-progress-linear>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Project Beta</td>
+                                                    <td><v-chip color="success" small>Active</v-chip></td>
+                                                    <td>
+                                                        <v-progress-linear
+                                                            color="primary"
+                                                            height="10"
+                                                            value="30"
+                                                            striped
+                                                        ></v-progress-linear>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </template>
+                                    </v-simple-table>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="6">
+                            <v-card class="dashboard-card">
+                                <v-card-title>Resource Utilization</v-card-title>
+                                <v-card-text>
+                                    <v-simple-table>
+                                        <template v-slot:default>
+                                            <thead>
+                                                <tr>
+                                                    <th>Resource</th>
+                                                    <th>Utilization</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>John Smith</td>
+                                                    <td>
+                                                        <v-progress-linear
+                                                            color="success"
+                                                            height="10"
+                                                            value="85"
+                                                        ></v-progress-linear>
+                                                        <div class="caption text-right">85%</div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Jane Doe</td>
+                                                    <td>
+                                                        <v-progress-linear
+                                                            color="info"
+                                                            height="10"
+                                                            value="65"
+                                                        ></v-progress-linear>
+                                                        <div class="caption text-right">65%</div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Bob Johnson</td>
+                                                    <td>
+                                                        <v-progress-linear
+                                                            color="error"
+                                                            height="10"
+                                                            value="105"
+                                                        ></v-progress-linear>
+                                                        <div class="caption text-right">105%</div>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Alice Williams</td>
+                                                    <td>
+                                                        <v-progress-linear
+                                                            color="success"
+                                                            height="10"
+                                                            value="75"
+                                                        ></v-progress-linear>
+                                                        <div class="caption text-right">75%</div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </template>
+                                    </v-simple-table>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-main>
+
+            <v-footer app>
+                <span>&copy; {{ new Date().getFullYear() }} IRMA - Integrated Resource Management Application</span>
+            </v-footer>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify({
+                theme: {
+                    themes: {
+                        light: {
+                            primary: '#1976D2',
+                            secondary: '#424242',
+                            accent: '#82B1FF',
+                            error: '#FF5252',
+                            info: '#2196F3',
+                            success: '#4CAF50',
+                            warning: '#FFC107'
+                        }
+                    }
+                }
+            })
+        })
+    </script>
+</body>
+</html>

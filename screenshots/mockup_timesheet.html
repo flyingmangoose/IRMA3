@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRMA Timesheet</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Roboto', sans-serif;
+        }
+        .timesheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .timesheet-cell {
+            width: 60px;
+            text-align: center;
+        }
+        .weekend {
+            background-color: #f5f5f5;
+        }
+        .timesheet-input {
+            width: 100%;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 4px;
+        }
+        .timesheet-input:focus {
+            border-color: #1976D2;
+            outline: none;
+        }
+        .timesheet-total {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <v-app-bar app color="primary" dark>
+                <v-app-bar-nav-icon></v-app-bar-nav-icon>
+                <v-toolbar-title>I.R.M.A.</v-toolbar-title>
+                <v-spacer></v-spacer>
+                <v-btn icon>
+                  <v-icon>mdi-bell</v-icon>
+                </v-btn>
+                <v-btn icon>
+                  <v-icon>mdi-account-circle</v-icon>
+                </v-btn>
+            </v-app-bar>
+
+            <v-navigation-drawer app>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-list-item-title class="text-h6">
+                            Integrated Resource Management Application
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                            Welcome, Manager User
+                        </v-list-item-subtitle>
+                    </v-list-item-content>
+                </v-list-item>
+
+                <v-divider></v-divider>
+
+                <v-list dense nav>
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-home</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Home</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link class="primary--text">
+                        <v-list-item-icon>
+                            <v-icon color="primary">mdi-calendar-clock</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Timesheets</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-folder</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Projects</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-group</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Clients</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-chart-bar</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Reports</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-file-document</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Invoices</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-multiple</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Resources</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>User Management</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Settings</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+                </v-list>
+            </v-navigation-drawer>
+
+            <v-main>
+                <v-container fluid>
+                    <div class="timesheet-header">
+                        <div>
+                            <h1 class="text-h4">Timesheet</h1>
+                            <v-chip color="success" small>Saved</v-chip>
+                        </div>
+                        <div>
+                            <v-chip-group>
+                                <v-chip outlined>Role: manager</v-chip>
+                                <v-chip color="warning">ADD TEST PROJECT</v-chip>
+                                <v-chip>EMPLOYEE</v-chip>
+                                <v-chip>SUPERVISOR</v-chip>
+                                <v-chip color="primary">MANAGER</v-chip>
+                            </v-chip-group>
+                        </div>
+                    </div>
+
+                    <v-row>
+                        <v-col cols="12" md="8">
+                            <v-card>
+                                <v-card-title class="d-flex justify-space-between">
+                                    <div>4/17/2025 - 5/1/2025</div>
+                                    <v-select
+                                        label="Add Project"
+                                        outlined
+                                        dense
+                                        hide-details
+                                        class="ml-4"
+                                        style="width: 200px;"
+                                    ></v-select>
+                                </v-card-title>
+                                <v-card-text>
+                                    <v-simple-table>
+                                        <template v-slot:default>
+                                            <thead>
+                                                <tr>
+                                                    <th class="text-left">Project</th>
+                                                    <th class="timesheet-cell">Thu, Apr 17</th>
+                                                    <th class="timesheet-cell">Fri, Apr 18</th>
+                                                    <th class="timesheet-cell weekend">Sat, Apr 19 Weekend</th>
+                                                    <th class="timesheet-cell weekend">Sun, Apr 20 Weekend</th>
+                                                    <th class="timesheet-cell">Mon, Apr 21</th>
+                                                    <th class="timesheet-cell">Tue, Apr 22</th>
+                                                    <th class="timesheet-cell">Wed, Apr 23</th>
+                                                    <th class="timesheet-cell">Thu, Apr 24</th>
+                                                    <th class="timesheet-cell">Fri, Apr 25</th>
+                                                    <th class="timesheet-cell weekend">Sat, Apr 26 Weekend</th>
+                                                    <th class="timesheet-cell weekend">Sun, Apr 27 Weekend</th>
+                                                    <th class="timesheet-cell">Mon, Apr 28</th>
+                                                    <th class="timesheet-cell">Tue, Apr 29</th>
+                                                    <th class="timesheet-cell">Wed, Apr 30</th>
+                                                    <th class="timesheet-cell">Thu, May 1</th>
+                                                    <th class="text-center">Total</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Project Alpha</td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="8.0">
+                                                    </td>
+                                                    <td class="text-center timesheet-total">88.0</td>
+                                                    <td>
+                                                        <v-btn icon color="error" small>
+                                                            <v-icon small>mdi-delete</v-icon>
+                                                        </v-btn>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Project Beta</td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell weekend">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="timesheet-cell">
+                                                        <input type="text" class="timesheet-input" value="0.0">
+                                                    </td>
+                                                    <td class="text-center timesheet-total">0.0</td>
+                                                    <td>
+                                                        <v-btn icon color="error" small>
+                                                            <v-icon small>mdi-delete</v-icon>
+                                                        </v-btn>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="16" class="text-center">
+                                                        <v-btn text color="primary">
+                                                            <v-icon left>mdi-plus</v-icon>
+                                                            Add Project to Timesheet
+                                                        </v-btn>
+                                                    </td>
+                                                    <td></td>
+                                                    <td></td>
+                                                </tr>
+                                                <tr class="grey lighten-4">
+                                                    <td class="font-weight-bold">Daily Total</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total weekend">0.0</td>
+                                                    <td class="text-center timesheet-total weekend">0.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total weekend">0.0</td>
+                                                    <td class="text-center timesheet-total weekend">0.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">8.0</td>
+                                                    <td class="text-center timesheet-total">88.0</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tbody>
+                                        </template>
+                                    </v-simple-table>
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-spacer></v-spacer>
+                                    <v-btn color="error" text>Discard Changes</v-btn>
+                                    <v-btn color="primary">Save</v-btn>
+                                    <v-btn color="success">Submit for Approval</v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-card>
+                                <v-card-title>Time Tracking</v-card-title>
+                                <v-card-text>
+                                    <v-select
+                                        label="Select Project"
+                                        :items="['Project Alpha', 'Project Beta']"
+                                        outlined
+                                    ></v-select>
+                                    <v-textarea
+                                        label="Description"
+                                        outlined
+                                        rows="3"
+                                        placeholder="What are you working on?"
+                                    ></v-textarea>
+                                    <div class="text-center my-4">
+                                        <div class="text-h2">00:00:00</div>
+                                        <div class="text-subtitle-1">Current Session</div>
+                                    </div>
+                                    <v-btn block color="success" height="50" class="mb-4">
+                                        <v-icon left>mdi-play</v-icon>
+                                        Start Timer
+                                    </v-btn>
+                                    <v-divider class="my-4"></v-divider>
+                                    <h3 class="text-subtitle-1 mb-2">Today's Activity</h3>
+                                    <v-timeline dense>
+                                        <v-timeline-item
+                                            color="primary"
+                                            small
+                                        >
+                                            <div class="d-flex justify-space-between">
+                                                <div>
+                                                    <strong>Project Alpha</strong>
+                                                    <div class="text-caption">Documentation update</div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <div>2.5 hours</div>
+                                                    <div class="text-caption">9:00 AM - 11:30 AM</div>
+                                                </div>
+                                            </div>
+                                        </v-timeline-item>
+                                        <v-timeline-item
+                                            color="primary"
+                                            small
+                                        >
+                                            <div class="d-flex justify-space-between">
+                                                <div>
+                                                    <strong>Project Alpha</strong>
+                                                    <div class="text-caption">Client meeting</div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <div>1.0 hour</div>
+                                                    <div class="text-caption">1:00 PM - 2:00 PM</div>
+                                                </div>
+                                            </div>
+                                        </v-timeline-item>
+                                    </v-timeline>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-main>
+
+            <v-footer app>
+                <span>&copy; {{ new Date().getFullYear() }} IRMA - Integrated Resource Management Application</span>
+            </v-footer>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            vuetify: new Vuetify({
+                theme: {
+                    themes: {
+                        light: {
+                            primary: '#1976D2',
+                            secondary: '#424242',
+                            accent: '#82B1FF',
+                            error: '#FF5252',
+                            info: '#2196F3',
+                            success: '#4CAF50',
+                            warning: '#FFC107'
+                        }
+                    }
+                }
+            })
+        })
+    </script>
+</body>
+</html>
