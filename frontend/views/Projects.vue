@@ -35,12 +35,12 @@
         }"
       >
         <!-- Client column -->
-        <template v-slot:item.client="{ item }">
+        <template v-slot:[`item.client`]="{ item }">
           {{ item.client }}
         </template>
 
         <!-- Status column -->
-        <template v-slot:item.status="{ item }">
+        <template v-slot:[`item.status`]="{ item }">
           <v-chip
             :color="getStatusColor(item.status)"
             text-color="white"
@@ -51,12 +51,12 @@
         </template>
 
         <!-- Budget column -->
-        <template v-slot:item.budget="{ item }">
+        <template v-slot:[`item.budget`]="{ item }">
           ${{ item.budget.toLocaleString() }}
         </template>
 
         <!-- Budget used column with progress bar -->
-        <template v-slot:item.budgetUsedPercentage="{ item }">
+        <template v-slot:[`item.budgetUsedPercentage`]="{ item }">
           <v-progress-linear
             :value="item.budgetUsedPercentage"
             height="15"
@@ -69,7 +69,7 @@
         </template>
 
         <!-- Actions column -->
-        <template v-slot:item.actions="{ item }">
+        <template v-slot:[`item.actions`]="{ item }">
           <v-icon small class="mr-2" @click="viewProject(item)">
             mdi-eye
           </v-icon>
