@@ -76,4 +76,10 @@ export default {
   color: #1976D2;
   cursor: pointer;
 }
+methods: {
+  login() {
+    this.$router.push('/');  // Redirects to home/dashboard
+  }
+}
+
 </style>
