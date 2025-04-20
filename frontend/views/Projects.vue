@@ -39,6 +39,11 @@
           {{ item.client }}
         </template>
 
+        <!-- Project Manager column -->
+        <template v-slot:[`item.projectManagerName`]="{ item }">
+          {{ item.projectManagerName }}
+        </template>
+
         <!-- Status column -->
         <template v-slot:[`item.status`]="{ item }">
           <v-chip
@@ -111,6 +116,18 @@
                     item-value="id"
                     label="Client"
                     :rules="[v => !!v || 'Client is required']"
+                    required
+                  ></v-select>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-select
+                    v-model="editedItem.projectManagerId"
+                    :items="projectManagers"
+                    item-text="name"
+                    item-value="id"
+                    label="Project Manager"
+                    :rules="[v => !!v || 'Project Manager is required']"
                     required
                   ></v-select>
                 </v-col>
@@ -245,6 +262,16 @@
 
                 <v-list-item>
                   <v-list-item-icon>
+                    <v-icon>mdi-account-tie</v-icon>
+                  </v-list-item-icon>
+                  <v-list-item-content>
+                    <v-list-item-title>Project Manager</v-list-item-title>
+                    <v-list-item-subtitle>{{ viewedProject.projectManagerName }}</v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+
+                <v-list-item>
+                  <v-list-item-icon>
                     <v-icon>mdi-calendar-range</v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
@@ -355,6 +382,7 @@ export default {
       headers: [
         { text: 'Project Name', value: 'name', sortable: true },
         { text: 'Client', value: 'client', sortable: true },
+        { text: 'Project Manager', value: 'projectManagerName', sortable: true },
         { text: 'Status', value: 'status', sortable: true },
         { text: 'Start Date', value: 'startDateFormatted', sortable: true },
         { text: 'Budget', value: 'budget', sortable: true },
@@ -368,6 +396,8 @@ export default {
           name: 'Website Redesign',
           clientId: '1',
           client: 'Acme Corporation',
+          projectManagerId: '1',
+          projectManagerName: 'John Smith',
           description: 'Complete redesign of corporate website with new branding',
           startDate: '2023-01-15',
           startDateFormatted: 'Jan 15, 2023',
@@ -388,6 +418,8 @@ export default {
           name: 'Mobile App Development',
           clientId: '2',
           client: 'Globex Industries',
+          projectManagerId: '4',
+          projectManagerName: 'Emily Chen',
           description: 'Create iOS and Android apps for customer portal',
           startDate: '2023-02-10',
           startDateFormatted: 'Feb 10, 2023',
@@ -407,6 +439,8 @@ export default {
           name: 'Brand Strategy',
           clientId: '3',
           client: 'Initech',
+          projectManagerId: '6',
+          projectManagerName: 'Lisa Brown',
           description: 'Develop new brand strategy and guidelines',
           startDate: '2022-11-01',
           startDateFormatted: 'Nov 1, 2022',
@@ -426,6 +460,8 @@ export default {
           name: 'Data Migration',
           clientId: '1',
           client: 'Acme Corporation',
+          projectManagerId: '7',
+          projectManagerName: 'Tom Jackson',
           description: 'Migrate legacy CRM data to new platform',
           startDate: '2023-03-01',
           startDateFormatted: 'Mar 1, 2023',
@@ -445,6 +481,8 @@ export default {
           name: 'E-commerce Integration',
           clientId: '2',
           client: 'Globex Industries',
+          projectManagerId: '4',
+          projectManagerName: 'Emily Chen',
           description: 'Integrate payment gateway and shipping services',
           startDate: '2023-04-15',
           startDateFormatted: 'Apr 15, 2023',
@@ -464,6 +502,7 @@ export default {
       editedItem: {
         name: '',
         clientId: '',
+        projectManagerId: '',
         description: '',
         startDate: '',
         startDateFormatted: '',
@@ -475,6 +514,7 @@ export default {
       defaultItem: {
         name: '',
         clientId: '',
+        projectManagerId: '',
         description: '',
         startDate: '',
         startDateFormatted: '',
@@ -492,6 +532,15 @@ export default {
         { id: '3', name: 'Initech' },
         { id: '4', name: 'Umbrella Corp' },
         { id: '5', name: 'Stark Industries' }
+      ],
+      
+      // Project managers (users with PM role)
+      projectManagers: [
+        { id: '1', name: 'John Smith', role: 'Project Manager', department: 'Digital' },
+        { id: '4', name: 'Emily Chen', role: 'Project Manager', department: 'Mobile' },
+        { id: '6', name: 'Lisa Brown', role: 'Project Manager', department: 'Brand' },
+        { id: '7', name: 'Tom Jackson', role: 'Project Manager', department: 'Data' },
+        { id: '9', name: 'Michael Rodriguez', role: 'Project Manager', department: 'Enterprise' }
       ],
       
       statusOptions: ['Planning', 'Active', 'On Hold', 'Completed', 'Cancelled']
@@ -605,9 +654,14 @@ export default {
       if (this.editedIndex > -1) {
         // Update existing project
         const updatedProject = Object.assign({}, this.editedItem);
+        
         // Add client name from id
         const client = this.clients.find(c => c.id === updatedProject.clientId);
         updatedProject.client = client ? client.name : '';
+        
+        // Add project manager name from id
+        const projectManager = this.projectManagers.find(pm => pm.id === updatedProject.projectManagerId);
+        updatedProject.projectManagerName = projectManager ? projectManager.name : '';
         
         // Update project in array
         Object.assign(this.projects[this.editedIndex], updatedProject);
@@ -621,9 +675,23 @@ export default {
         const client = this.clients.find(c => c.id === newProject.clientId);
         newProject.client = client ? client.name : '';
         
+        // Add project manager name from id
+        const projectManager = this.projectManagers.find(pm => pm.id === newProject.projectManagerId);
+        newProject.projectManagerName = projectManager ? projectManager.name : '';
+        
         // Set default values
         newProject.budgetRemaining = newProject.budget;
         newProject.budgetUsedPercentage = 0;
+        newProject.team = [];
+        
+        if (projectManager) {
+          // Automatically add PM to the team as Lead
+          newProject.team.push({
+            id: projectManager.id,
+            name: projectManager.name,
+            role: 'Lead'
+          });
+        }
         
         // Add to array
         this.projects.push(newProject);
