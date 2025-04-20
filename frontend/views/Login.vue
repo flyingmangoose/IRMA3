@@ -10,7 +10,7 @@
         <label>Password</label>
         <input type="password" placeholder="Enter your password" />
       </div>
-      <button class="primary-button">Login</button>
+      <button class="primary-button" @click="login">Login</button>
       <p class="forgot-password">Forgot your password?</p>
     </div>
   </div>
@@ -25,10 +25,13 @@ export default {
     }
   },
   methods: {
-    // Login methods would go here
+    login() {
+      this.$router.push('/');  // Redirects to home/dashboard
+    }
   }
 }
 </script>
+
 
 <style scoped>
 .login-container {
@@ -76,10 +79,4 @@ export default {
   color: #1976D2;
   cursor: pointer;
 }
-methods: {
-  login() {
-    this.$router.push('/');  // Redirects to home/dashboard
-  }
-}
-
 </style>
