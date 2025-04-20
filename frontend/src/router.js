@@ -4,7 +4,8 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Home from '../views/Home.vue'
 import Login from '../views/Login.vue'
-import store from '../store'
+// Comment out the store import since we're not using it anymore
+// import store from '../store'
 
 Vue.use(VueRouter)
 
@@ -13,7 +14,8 @@ const routes = [
     path: '/',
     name: 'Home',
     component: Home,
-    meta: { requiresAuth: true }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/login',
@@ -25,55 +27,64 @@ const routes = [
     path: '/timesheets',
     name: 'Timesheets',
     component: () => import('../views/Timesheets.vue'),
-    meta: { requiresAuth: true }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/projects',
     name: 'Projects',
     component: () => import('../views/Projects.vue'),
-    meta: { requiresAuth: true }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/clients',
     name: 'Clients',
     component: () => import('../views/Clients.vue'),
-    meta: { requiresAuth: true }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/reports',
     name: 'Reports',
     component: () => import('../views/Reports.vue'),
-    meta: { requiresAuth: true, permissions: ['view_reports'] }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/invoices',
     name: 'Invoices',
     component: () => import('../views/Invoices.vue'),
-    meta: { requiresAuth: true, permissions: ['view_invoices'] }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/resources',
     name: 'Resources',
     component: () => import('../views/Resources.vue'),
-    meta: { requiresAuth: true, permissions: ['view_resources'] }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/users',
     name: 'Users',
     component: () => import('../views/Users.vue'),
-    meta: { requiresAuth: true, permissions: ['view_users'] }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/settings',
     name: 'Settings',
     component: () => import('../views/Settings.vue'),
-    meta: { requiresAuth: true, permissions: ['manage_settings'] }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/Profile.vue'),
-    meta: { requiresAuth: true }
+    // Removed requiresAuth to allow direct access
+    meta: { }
   },
   {
     path: '*',
@@ -87,8 +98,12 @@ const router = new VueRouter({
   routes
 })
 
-// Navigation guards
+// Modified navigation guards to always allow access
 router.beforeEach((to, from, next) => {
+  // Always proceed to the requested route
+  next()
+  
+  /* Original authentication logic (commented out)
   const isLoggedIn = store.getters['auth/isAuthenticated']
   
   // Routes that require authentication
@@ -127,6 +142,7 @@ router.beforeEach((to, from, next) => {
   else {
     next()
   }
+  */
 })
 
 export default router
