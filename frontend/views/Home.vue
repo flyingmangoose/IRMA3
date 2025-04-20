@@ -24,7 +24,7 @@
 
 <script>
 export default {
-  name: 'Home',
+  name: 'HomePage',
   data() {
     return {
       // Dashboard data would be loaded here

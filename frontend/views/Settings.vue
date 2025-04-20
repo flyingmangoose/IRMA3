@@ -7,14 +7,6 @@
         <input type="text" placeholder="Enter company name" />
       </div>
       <div class="form-group">
-        <label>Default Currency</label>
-        <select>
-          <option>USD</option>
-          <option>EUR</option>
-          <option>GBP</option>
-        </select>
-      </div>
-      <div class="form-group">
         <label>Email Notifications</label>
         <input type="checkbox" /> Enable email notifications
       </div>
@@ -25,7 +17,7 @@
 
 <script>
 export default {
-  name: 'Settings',
+  name: 'SettingsPage',
   data() {
     return {
       // Settings data would be loaded here
@@ -55,8 +47,7 @@ export default {
   margin-bottom: 5px;
   font-weight: bold;
 }
-.form-group input[type="text"],
-.form-group select {
+.form-group input[type="text"] {
   width: 100%;
   padding: 8px;
   border: 1px solid #ddd;

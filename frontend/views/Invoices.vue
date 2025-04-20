@@ -13,7 +13,7 @@
 
 <script>
 export default {
-  name: 'Invoices',
+  name: 'InvoicesPage',
   data() {
     return {
       // Invoice data would be loaded here

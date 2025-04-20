@@ -13,7 +13,7 @@
 
 <script>
 export default {
-  name: 'Clients',
+  name: 'ClientsPage',
   data() {
     return {
       // Client data would be loaded here
