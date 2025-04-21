@@ -92,9 +92,58 @@
                 </v-chip>
               </div>
               
-              <div class="chart-container" style="position: relative; height: 400px;">
-                <canvas ref="projectBudgetChart"></canvas>
+              <!-- Simple bar chart representation -->
+              <div class="chart-container mb-4">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1">Hours Usage by Month</div>
+                  <v-chip small>Total Used: {{ selectedProjectUsed }} / {{ selectedProjectBudget }} hours</v-chip>
+                </div>
+                
+                <div class="simple-chart">
+                  <div v-for="(value, index) in projectBudgetData.datasets[0].data" :key="index" class="simple-chart-item">
+                    <div class="simple-chart-label">{{ projectBudgetData.labels[index] }}</div>
+                    <v-progress-linear
+                      :value="(value / selectedProjectBudget) * 100"
+                      height="30"
+                      color="primary"
+                    >
+                      <template v-slot:default>
+                        <span class="white--text">{{ value }} hrs</span>
+                      </template>
+                    </v-progress-linear>
+                  </div>
+                </div>
               </div>
+              
+              <!-- Budget burndown table -->
+              <v-simple-table class="mt-6">
+                <template v-slot:default>
+                  <thead>
+                    <tr>
+                      <th class="text-left">Month</th>
+                      <th class="text-left">Hours Used</th>
+                      <th class="text-left">Percentage of Budget</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(value, index) in projectBudgetData.datasets[0].data" :key="index">
+                      <td>{{ projectBudgetData.labels[index] }}</td>
+                      <td>{{ value }}</td>
+                      <td>
+                        <v-progress-linear
+                          :value="(value / selectedProjectBudget) * 100"
+                          height="20"
+                          :color="getBudgetColor((value / selectedProjectBudget) * 100)"
+                        >
+                          <template v-slot:default>
+                            <span>{{ Math.round((value / selectedProjectBudget) * 100) }}%</span>
+                          </template>
+                        </v-progress-linear>
+                      </td>
+                    </tr>
+                  </tbody>
+                </template>
+              </v-simple-table>
             </div>
           </v-tab-item>
 
@@ -134,8 +183,37 @@
                 </v-chip>
               </div>
               
-              <div class="chart-container" style="position: relative; height: 400px;">
-                <canvas ref="utilizationChart"></canvas>
+              <!-- Simple visualization instead of Chart.js -->
+              <div class="chart-container mb-6">
+                <div v-if="utilizationView === 'monthly'" class="simple-chart">
+                  <div v-for="(value, index) in utilizationData.datasets[0].data" :key="index" class="simple-chart-item">
+                    <div class="simple-chart-label">{{ utilizationData.labels[index] }}</div>
+                    <v-progress-linear
+                      :value="value"
+                      height="30"
+                      :color="getUtilizationColor(value)"
+                    >
+                      <template v-slot:default>
+                        <span class="white--text">{{ value }}%</span>
+                      </template>
+                    </v-progress-linear>
+                  </div>
+                </div>
+                <div v-else>
+                  <v-card outlined class="pa-4">
+                    <div v-for="(resource, index) in utilizationTableData" :key="resource.id" class="mb-3">
+                      <div class="d-flex justify-space-between mb-1">
+                        <div>{{ resource.name }}</div>
+                        <div>{{ resource.utilization }}%</div>
+                      </div>
+                      <v-progress-linear
+                        :value="resource.utilization"
+                        height="20"
+                        :color="getUtilizationColor(resource.utilization)"
+                      ></v-progress-linear>
+                    </div>
+                  </v-card>
+                </div>
               </div>
               
               <div class="mt-6">
@@ -189,9 +267,35 @@
                 </v-card>
               </div>
               
-              <div class="chart-container mb-6" style="position: relative; height: 250px;">
-                <canvas ref="projectStatusChart"></canvas>
-              </div>
+              <!-- Simple status visualization instead of Chart.js -->
+              <v-card outlined class="pa-4 mb-6">
+                <div class="text-subtitle-1 mb-4">Project Status Distribution</div>
+                <div class="d-flex status-chart">
+                  <div 
+                    class="status-bar success" 
+                    :style="{flex: projectStatusCounts.onTrack || 0.001}"
+                  >
+                    <span v-if="projectStatusCounts.onTrack">{{ projectStatusCounts.onTrack }}</span>
+                  </div>
+                  <div 
+                    class="status-bar warning" 
+                    :style="{flex: projectStatusCounts.atRisk || 0.001}"
+                  >
+                    <span v-if="projectStatusCounts.atRisk">{{ projectStatusCounts.atRisk }}</span>
+                  </div>
+                  <div 
+                    class="status-bar error" 
+                    :style="{flex: projectStatusCounts.behind || 0.001}"
+                  >
+                    <span v-if="projectStatusCounts.behind">{{ projectStatusCounts.behind }}</span>
+                  </div>
+                </div>
+                <div class="d-flex justify-space-between mt-2">
+                  <div class="caption"><v-icon small color="success">mdi-checkbox-blank-circle</v-icon> On Track</div>
+                  <div class="caption"><v-icon small color="warning">mdi-checkbox-blank-circle</v-icon> At Risk</div>
+                  <div class="caption"><v-icon small color="error">mdi-checkbox-blank-circle</v-icon> Behind</div>
+                </div>
+              </v-card>
               
               <v-data-table
                 :headers="projectStatusHeaders"
@@ -228,7 +332,6 @@
 // eslint-disable-next-line no-unused-vars
 import axios from 'axios';
 import moment from 'moment';
-import Chart from 'chart.js';
 
 export default {
   name: 'ReportsPage',
@@ -245,11 +348,6 @@ export default {
       
       selectedProject: null,
       utilizationView: 'monthly',
-      
-      // Chart instances
-      projectBudgetChart: null,
-      utilizationChart: null,
-      projectStatusChart: null,
       
       // Sample data (would come from API)
       projects: [],
@@ -300,10 +398,7 @@ export default {
           labels: [],
           datasets: [{
             label: 'Hours Used',
-            data: [],
-            backgroundColor: 'rgba(66, 165, 245, 0.5)',
-            borderColor: 'rgba(66, 165, 245, 1)',
-            borderWidth: 1
+            data: []
           }]
         };
       }
@@ -320,11 +415,7 @@ export default {
         labels: months.map(m => m.format('MMM YYYY')),
         datasets: [{
           label: 'Hours Used',
-          data: hoursUsed,
-          backgroundColor: 'rgba(66, 165, 245, 0.5)',
-          borderColor: 'rgba(66, 165, 245, 1)',
-          borderWidth: 1,
-          fill: true
+          data: hoursUsed
         }]
       };
     },
@@ -428,22 +519,7 @@ export default {
       this.loading = true;
       
       setTimeout(() => {
-        // Destroy existing charts
-        if (this.projectBudgetChart) {
-          this.projectBudgetChart.destroy();
-        }
-        if (this.utilizationChart) {
-          this.utilizationChart.destroy();
-        }
-        if (this.projectStatusChart) {
-          this.projectStatusChart.destroy();
-        }
-        
-        // Create new charts
-        this.$nextTick(() => {
-          this.renderCharts();
-          this.loading = false;
-        });
+        this.loading = false;
       }, 800);
     },
     
@@ -451,112 +527,6 @@ export default {
     selectDateRange() {
       this.dateMenu = false;
       this.generateReport();
-    },
-    
-    // Render all charts based on current tab
-    renderCharts() {
-      if (this.activeTab === 0 && this.selectedProject) {
-        this.renderProjectBudgetChart();
-      } else if (this.activeTab === 1) {
-        this.renderUtilizationChart();
-      } else if (this.activeTab === 2) {
-        this.renderProjectStatusChart();
-      }
-    },
-    
-    // Render project budget burndown chart
-    renderProjectBudgetChart() {
-      const ctx = this.$refs.projectBudgetChart;
-      if (!ctx) return;
-      
-      this.projectBudgetChart = new Chart(ctx, {
-        type: 'line',
-        data: this.projectBudgetData,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            yAxes: [{
-              ticks: {
-                beginAtZero: true
-              },
-              scaleLabel: {
-                display: true,
-                labelString: 'Hours'
-              }
-            }]
-          }
-        }
-      });
-    },
-    
-    // Render utilization chart
-    renderUtilizationChart() {
-      const ctx = this.$refs.utilizationChart;
-      if (!ctx) return;
-      
-      const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          yAxes: [{
-            ticks: {
-              beginAtZero: true,
-              max: 100
-            },
-            scaleLabel: {
-              display: true,
-              labelString: 'Utilization %'
-            }
-          }]
-        }
-      };
-      
-      this.utilizationChart = new Chart(ctx, {
-        type: this.utilizationView === 'monthly' ? 'line' : 'bar',
-        data: this.utilizationData,
-        options
-      });
-    },
-    
-    // Render project status chart
-    renderProjectStatusChart() {
-      const ctx = this.$refs.projectStatusChart;
-      if (!ctx) return;
-      
-      const data = {
-        labels: ['On Track', 'At Risk', 'Behind'],
-        datasets: [{
-          data: [
-            this.projectStatusCounts.onTrack,
-            this.projectStatusCounts.atRisk,
-            this.projectStatusCounts.behind
-          ],
-          backgroundColor: [
-            'rgba(76, 175, 80, 0.6)',
-            'rgba(255, 152, 0, 0.6)',
-            'rgba(244, 67, 54, 0.6)'
-          ],
-          borderColor: [
-            'rgba(76, 175, 80, 1)',
-            'rgba(255, 152, 0, 1)',
-            'rgba(244, 67, 54, 1)'
-          ],
-          borderWidth: 1
-        }]
-      };
-      
-      this.projectStatusChart = new Chart(ctx, {
-        type: 'doughnut',
-        data,
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          legend: {
-            position: 'right'
-          }
-        }
-      });
     },
     
     // Generate mock data for demo purposes
@@ -629,11 +599,6 @@ export default {
       
       // Generate mock time entries
       this.generateMockTimeEntries();
-      
-      // Generate initial charts
-      this.$nextTick(() => {
-        this.renderCharts();
-      });
     },
     
     // Generate mock time entries
@@ -654,7 +619,8 @@ export default {
           for (let i = 0; i < entriesCount; i++) {
             const day = Math.floor(Math.random() * daysInMonth) + 1;
             const date = month.clone().date(day).format('YYYY-MM-DD');
-            const resourceId = this.resources[Math.floor(Math.random() * this.resources.length)].id;
+            const resourceIndex = Math.floor(Math.random() * this.resources.length);
+            const resourceId = this.resources[resourceIndex].id;
             
             // Hours more likely to be higher for later months to show a trend
             const monthIndex = months.indexOf(month);
@@ -771,12 +737,7 @@ export default {
         labels: monthLabels,
         datasets: [{
           label: 'Monthly Utilization',
-          data: utilizationByMonth,
-          backgroundColor: 'rgba(76, 175, 80, 0.2)',
-          borderColor: 'rgba(76, 175, 80, 1)',
-          pointBackgroundColor: 'rgba(76, 175, 80, 1)',
-          borderWidth: 2,
-          fill: true
+          data: utilizationByMonth
         }]
       };
     },
@@ -787,14 +748,7 @@ export default {
         labels: this.resources.map(r => r.name),
         datasets: [{
           label: 'Resource Utilization',
-          data: this.utilizationTableData.map(r => r.utilization),
-          backgroundColor: this.utilizationTableData.map(r => 
-            this.getUtilizationColorRGBA(r.utilization, 0.6)
-          ),
-          borderColor: this.utilizationTableData.map(r => 
-            this.getUtilizationColorRGBA(r.utilization, 1)
-          ),
-          borderWidth: 1
+          data: this.utilizationTableData.map(r => r.utilization)
         }]
       };
     },
@@ -858,5 +812,51 @@ export default {
 
 .v-progress-linear {
   border-radius: 4px;
+}
+
+.chart-container {
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.simple-chart {
+  width: 100%;
+}
+
+.simple-chart-item {
+  margin-bottom: 12px;
+}
+
+.simple-chart-label {
+  margin-bottom: 4px;
+  font-size: 0.875rem;
+}
+
+.status-chart {
+  height: 50px;
+  width: 100%;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: bold;
+  min-width: 40px;
+}
+
+.status-bar.success {
+  background-color: rgba(76, 175, 80, 0.8);
+}
+
+.status-bar.warning {
+  background-color: rgba(255, 152, 0, 0.8);
+}
+
+.status-bar.error {
+  background-color: rgba(244, 67, 54, 0.8);
 }
 </style>
