@@ -386,7 +386,7 @@
 import axios from 'axios';
 
 export default {
-  name: 'Resources',
+  name: 'ResourcesPage',
   
   data() {
     return {
@@ -579,9 +579,7 @@ export default {
     },
 
     deleteResource() {
-      const resourceId = this.editedItem.id;
-      
-      axios.delete(`/api/users/${resourceId}`)
+      axios.delete(`/api/users/${this.editedItem.id}`)
         .then(() => {
           this.resources.splice(this.editedIndex, 1);
           this.$store.dispatch('setSnackbar', {
