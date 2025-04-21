@@ -132,6 +132,48 @@
       </v-simple-table>
     </v-card>
 
+    <!-- Submission and approval card -->
+    <v-card class="mt-4 elevation-1">
+      <v-card-text>
+        <div class="d-flex align-center">
+          <div>
+            <div class="text-h6">Total Hours: {{ calculateTotalHours().toFixed(2) }}</div>
+            <div class="text-caption">Status: 
+              <v-chip x-small :color="getStatusColor(timesheetStatus)" class="ml-2">
+                {{ timesheetStatus }}
+              </v-chip>
+            </div>
+          </div>
+          <v-spacer></v-spacer>
+          <v-btn 
+            color="primary" 
+            :disabled="!canSubmitTimesheet" 
+            @click="showSubmitDialog"
+          >
+            {{ submissionAction }}
+          </v-btn>
+          <v-btn 
+            color="success" 
+            class="ml-2" 
+            v-if="canApproveTimesheet" 
+            :disabled="timesheetStatus !== 'Submitted'" 
+            @click="showApprovalDialog"
+          >
+            Approve
+          </v-btn>
+          <v-btn 
+            color="error" 
+            class="ml-2" 
+            v-if="canApproveTimesheet" 
+            :disabled="timesheetStatus !== 'Submitted'" 
+            @click="showRejectionDialog"
+          >
+            Reject
+          </v-btn>
+        </div>
+      </v-card-text>
+    </v-card>
+
     <!-- Comment dialog -->
     <v-dialog v-model="commentDialog" max-width="500px">
       <v-card>
@@ -186,6 +228,140 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- Submit Timesheet Dialog -->
+    <v-dialog v-model="submitDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Submit Timesheet</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <p>You are about to submit your timesheet for approval.</p>
+            <p>Total Hours: <strong>{{ calculateTotalHours().toFixed(2) }}</strong></p>
+            <p class="mt-4">Please review your entries before submitting. Once submitted, you won't be able to make changes until it's approved or rejected.</p>
+            
+            <v-alert
+              v-if="submitError"
+              type="error"
+              outlined
+              dense
+              class="mt-2"
+            >
+              {{ submitError }}
+            </v-alert>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="error" text @click="submitDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn color="primary" text @click="submitTimesheet">
+            Submit for Approval
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Approval Dialog -->
+    <v-dialog v-model="approvalDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Approve Timesheet</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <p>You are approving this timesheet.</p>
+            <p>Employee: <strong>{{ timesheetOwner }}</strong></p>
+            <p>Period: <strong>{{ dateRangeText }}</strong></p>
+            <p>Total Hours: <strong>{{ calculateTotalHours().toFixed(2) }}</strong></p>
+            
+            <v-textarea
+              v-model="approvalComment"
+              label="Comments (Optional)"
+              placeholder="Add any comments about this approval"
+              auto-grow
+              rows="3"
+              counter="500"
+              class="mt-4"
+            ></v-textarea>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="error" text @click="approvalDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn color="success" text @click="approveTimesheet">
+            Approve Timesheet
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Rejection Dialog -->
+    <v-dialog v-model="rejectionDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Reject Timesheet</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <p>You are rejecting this timesheet.</p>
+            <p>Employee: <strong>{{ timesheetOwner }}</strong></p>
+            <p>Period: <strong>{{ dateRangeText }}</strong></p>
+            
+            <v-textarea
+              v-model="rejectionComment"
+              label="Reason for Rejection"
+              placeholder="Please provide a reason for rejecting this timesheet"
+              auto-grow
+              rows="3"
+              counter="500"
+              class="mt-4"
+              :rules="[v => !!v || 'A reason for rejection is required']"
+            ></v-textarea>
+            
+            <v-alert
+              v-if="rejectionError"
+              type="error"
+              outlined
+              dense
+              class="mt-2"
+            >
+              {{ rejectionError }}
+            </v-alert>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="primary" text @click="rejectionDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn color="error" text @click="rejectTimesheet">
+            Reject Timesheet
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="3000"
+    >
+      {{ snackbar.text }}
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          text
+          v-bind="attrs"
+          @click="snackbar.show = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
@@ -214,6 +390,19 @@ export default {
       // Track dirty state for saving
       isDirty: false,
       
+      // Timesheet status and approval workflow
+      timesheetStatus: 'Draft', // Draft, Submitted, Approved, Rejected
+      timesheetOwnerId: null,
+      timesheetOwner: 'Current User', // Will be populated with user name
+      approver: null,
+      
+      // Notification
+      snackbar: {
+        show: false,
+        text: '',
+        color: 'success'
+      },
+      
       // Comment dialog
       commentDialog: false,
       commentError: '',
@@ -222,6 +411,28 @@ export default {
         date: null,
         hours: 0,
         comment: ''
+      },
+      
+      // Submit dialog
+      submitDialog: false,
+      submitError: '',
+      
+      // Approval dialog
+      approvalDialog: false,
+      approvalComment: '',
+      
+      // Rejection dialog
+      rejectionDialog: false,
+      rejectionComment: '',
+      rejectionError: '',
+      
+      // User roles and hierarchy for approvals
+      userHierarchy: {
+        'employee': 1,
+        'team-lead': 2,
+        'project-manager': 3,
+        'director': 4,
+        'executive': 5
       }
     };
   },
@@ -270,6 +481,40 @@ export default {
       }
       
       return days;
+    },
+    
+    // Determine if user can submit timesheet
+    canSubmitTimesheet() {
+      // Can submit if:
+      // 1. It's their own timesheet
+      // 2. Status is Draft or Rejected
+      // 3. There are entries with hours > 0
+      const hasEntries = this.calculateTotalHours() > 0;
+      return (this.timesheetStatus === 'Draft' || this.timesheetStatus === 'Rejected') && hasEntries;
+    },
+    
+    // Determine if user can approve timesheet
+    canApproveTimesheet() {
+      // Check if user has permission to approve this timesheet
+      if (!this.currentUser || !this.currentUser.role) return false;
+      
+      // If viewing own timesheet, can't approve
+      if (this.timesheetOwnerId === this.currentUser.id) return false;
+      
+      // Check hierarchy level
+      const ownerRole = this.getTimesheetOwnerRole();
+      const currentUserHierarchy = this.userHierarchy[this.currentUser.role] || 0;
+      const ownerHierarchy = this.userHierarchy[ownerRole] || 0;
+      
+      // For PM (level 3) can approve level 1-2
+      // For Director or higher (level 4-5) can approve level 1-3
+      // No one can approve same level or higher
+      return currentUserHierarchy > ownerHierarchy;
+    },
+    
+    // Text for submission button
+    submissionAction() {
+      return this.timesheetStatus === 'Rejected' ? 'Resubmit' : 'Submit';
     }
   },
   
@@ -294,6 +539,7 @@ export default {
     initialize() {
       this.fetchProjects();
       this.fetchTimeEntries();
+      this.initializeUser();
     },
     
     // Fetch available projects
@@ -393,6 +639,197 @@ export default {
           this.loading = false;
         });
       */
+    },
+    
+    // Setup user information
+    initializeUser() {
+      // This would normally use data from the store
+      this.timesheetOwnerId = this.currentUser ? this.currentUser.id : 1;
+      this.timesheetOwner = this.currentUser ? 
+        `${this.currentUser.firstName} ${this.currentUser.lastName}` : 
+        'John Doe';
+
+      // For demo purposes, let's set a mock role
+      if (!this.currentUser) {
+        // Mock user role if not available in store
+        this.$store.state.user = this.$store.state.user || {};
+        this.$store.state.user.role = 'employee'; // Default to employee
+      }
+    },
+    
+    // Get timesheet owner's role (in a real app, this would come from API)
+    getTimesheetOwnerRole() {
+      // In a real app, this would check the owner's role from the API
+      // For demo, we'll assume it's 'employee' or get from current user
+      return this.currentUser ? this.currentUser.role : 'employee';
+    },
+    
+    // Get color for status chip
+    getStatusColor(status) {
+      switch (status) {
+        case 'Draft': return 'grey';
+        case 'Submitted': return 'warning';
+        case 'Approved': return 'success';
+        case 'Rejected': return 'error';
+        default: return 'grey';
+      }
+    },
+    
+    // Show submission dialog
+    showSubmitDialog() {
+      this.submitError = '';
+      this.submitDialog = true;
+    },
+    
+    // Submit timesheet for approval
+    submitTimesheet() {
+      // Validate that all entries have comments
+      let missingComments = false;
+      
+      Object.keys(this.timeEntries).forEach(projectId => {
+        Object.keys(this.timeEntries[projectId]).forEach(date => {
+          const entry = this.timeEntries[projectId][date];
+          if (parseFloat(entry.hours) > 0 && !entry.comment) {
+            missingComments = true;
+          }
+        });
+      });
+      
+      if (missingComments) {
+        this.submitError = 'All time entries must have comments. Please complete all entries.';
+        return;
+      }
+      
+      // Submit for approval
+      this.timesheetStatus = 'Submitted';
+      this.submitDialog = false;
+      
+      // Find an appropriate approver based on hierarchy
+      this.determineApprover();
+      
+      this.showSnackbar('Timesheet submitted for approval', 'success');
+      
+      // In a real app, this would call the API
+      /*
+      axios.post(`/api/timesheets/${this.timesheetId}/submit`)
+        .then(response => {
+          this.timesheetStatus = 'Submitted';
+          this.approver = response.data.approver;
+          this.submitDialog = false;
+          this.showSnackbar('Timesheet submitted for approval', 'success');
+        })
+        .catch(error => {
+          console.error('Error submitting timesheet:', error);
+          this.submitError = error.response?.data?.message || 'Error submitting timesheet';
+        });
+      */
+    },
+    
+    // Determine who should approve this timesheet based on hierarchy
+    determineApprover() {
+      // Mock implementation - in a real app, this would be handled by the backend
+      const ownerRole = this.getTimesheetOwnerRole();
+      const ownerHierarchy = this.userHierarchy[ownerRole] || 1;
+      
+      // Find a user with appropriate hierarchy level to approve
+      let approverRole;
+      
+      if (ownerHierarchy <= 2) { // employee or team lead
+        approverRole = 'project-manager';
+      } else if (ownerHierarchy === 3) { // project manager
+        approverRole = 'director';
+      } else {
+        approverRole = 'executive';
+      }
+      
+      // In a real app, we would query the API for users with this role
+      // For now, just set a mock approver
+      this.approver = {
+        id: 99,
+        name: `Sample ${approverRole.replace('-', ' ')}`,
+        role: approverRole
+      };
+      
+      console.log(`Timesheet will be approved by ${this.approver.name} (${this.approver.role})`);
+    },
+    
+    // Show approval dialog
+    showApprovalDialog() {
+      this.approvalComment = '';
+      this.approvalDialog = true;
+    },
+    
+    // Approve timesheet
+    approveTimesheet() {
+      // Update status
+      this.timesheetStatus = 'Approved';
+      this.approvalDialog = false;
+      this.showSnackbar('Timesheet approved', 'success');
+      
+      // In a real app, this would call the API
+      /*
+      axios.post(`/api/timesheets/${this.timesheetId}/approve`, {
+        comment: this.approvalComment
+      })
+        .then(() => {
+          this.timesheetStatus = 'Approved';
+          this.approvalDialog = false;
+          this.showSnackbar('Timesheet approved', 'success');
+        })
+        .catch(error => {
+          console.error('Error approving timesheet:', error);
+          this.showSnackbar(
+            error.response?.data?.message || 'Error approving timesheet', 
+            'error'
+          );
+        });
+      */
+    },
+    
+    // Show rejection dialog
+    showRejectionDialog() {
+      this.rejectionComment = '';
+      this.rejectionError = '';
+      this.rejectionDialog = true;
+    },
+    
+    // Reject timesheet
+    rejectTimesheet() {
+      // Validate rejection reason
+      if (!this.rejectionComment.trim()) {
+        this.rejectionError = 'Please provide a reason for rejection';
+        return;
+      }
+      
+      // Update status
+      this.timesheetStatus = 'Rejected';
+      this.rejectionDialog = false;
+      this.showSnackbar('Timesheet rejected', 'error');
+      
+      // In a real app, this would call the API
+      /*
+      axios.post(`/api/timesheets/${this.timesheetId}/reject`, {
+        comment: this.rejectionComment
+      })
+        .then(() => {
+          this.timesheetStatus = 'Rejected';
+          this.rejectionDialog = false;
+          this.showSnackbar('Timesheet rejected', 'error');
+        })
+        .catch(error => {
+          console.error('Error rejecting timesheet:', error);
+          this.rejectionError = error.response?.data?.message || 'Error rejecting timesheet';
+        });
+      */
+    },
+    
+    // Show snackbar notification
+    showSnackbar(text, color = 'success') {
+      this.snackbar = {
+        show: true,
+        text,
+        color
+      };
     },
     
     // Add a project to the timesheet
@@ -542,6 +979,12 @@ export default {
     saveTimesheet() {
       if (!this.isDirty) return;
       
+      // Can't edit if already submitted and not rejected
+      if (this.timesheetStatus === 'Submitted' || this.timesheetStatus === 'Approved') {
+        this.showSnackbar('Cannot edit a submitted or approved timesheet', 'error');
+        return;
+      }
+      
       // Check if all entries have comments
       let missingComments = false;
       
@@ -550,14 +993,12 @@ export default {
           const entry = this.timeEntries[projectId][date];
           if (parseFloat(entry.hours) > 0 && !entry.comment) {
             missingComments = true;
-            // Highlight the entry that needs a comment
-            this.openCommentDialog(projectId, date);
           }
         });
       });
       
       if (missingComments) {
-        // Let the dialog handle the error
+        this.showSnackbar('All time entries must have comments. Please complete all entries.', 'error');
         return;
       }
       
