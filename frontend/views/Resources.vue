@@ -543,6 +543,7 @@ export default {
       this.dialogViewResource = true;
     },
     
+    // eslint-disable-next-line no-unused-vars
     fetchResourceProjects(resourceId) {
       // This would fetch projects assigned to this resource
       // For now, use mock data for demonstration

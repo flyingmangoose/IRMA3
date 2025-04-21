@@ -681,6 +681,11 @@ export default {
       }
       
       this.closeDialog();
+    },
+
+    // eslint-disable-next-line no-unused-vars
+    fetchResourceProjects(resourceId) {
+      // Method implementation...
     }
   }
 }
