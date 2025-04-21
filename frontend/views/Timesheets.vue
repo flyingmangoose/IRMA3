@@ -49,36 +49,53 @@
       class="elevation-1 timesheet-table"
       :items-per-page="-1"
     >
+      <!-- Project name column -->
       <template v-slot:item.project="{ item }">
         {{ item.name }}
       </template>
 
-      <!-- Dynamic slots for each day of the period -->
-      <template v-for="day in daysInPeriod" v-slot:[`item.day${day.index}`]="{ item }">
-        <div :key="`${item.id}-${day.date}`" class="hour-cell">
-          <v-text-field
-            v-if="!day.isWeekend"
-            v-model="timeEntries[item.id][day.date]"
-            type="number"
-            step="0.5"
-            min="0"
-            max="24"
-            hide-details
-            single-line
-            class="hour-input"
-            @blur="validateAndSave(item.id, day.date)"
-            @focus="onFocus"
-          ></v-text-field>
-          <div v-else class="weekend-cell">
-            <!-- Weekend cell -->
-          </div>
-        </div>
-      </template>
-
+      <!-- Total column -->
       <template v-slot:item.total="{ item }">
         <div class="font-weight-bold">
           {{ calculateProjectTotal(item.id).toFixed(1) }}
         </div>
+      </template>
+
+      <!-- Handle each day column through item template override -->
+      <template v-slot:item="{ item, headers, index }">
+        <tr>
+          <td>{{ item.name }}</td>
+          
+          <!-- Loop through days and render appropriate cells -->
+          <td v-for="day in daysInPeriod" :key="`${item.id}-${day.date}`" 
+              :class="{ 'weekend-column': day.isWeekend }">
+            <div class="hour-cell">
+              <v-text-field
+                v-if="!day.isWeekend"
+                v-model="timeEntries[item.id][day.date]"
+                type="number"
+                step="0.5"
+                min="0"
+                max="24"
+                hide-details
+                single-line
+                class="hour-input"
+                @blur="validateAndSave(item.id, day.date)"
+                @focus="onFocus"
+              ></v-text-field>
+              <div v-else class="weekend-cell">
+                <!-- Weekend cell -->
+              </div>
+            </div>
+          </td>
+          
+          <!-- Total column -->
+          <td class="text-center">
+            <div class="font-weight-bold">
+              {{ calculateProjectTotal(item.id).toFixed(1) }}
+            </div>
+          </td>
+        </tr>
       </template>
 
       <!-- Add Project row -->
@@ -102,7 +119,8 @@
       <template v-slot:footer>
         <tr class="daily-total-row">
           <td class="font-weight-bold">Daily Total</td>
-          <td v-for="day in daysInPeriod" :key="day.date" class="text-center">
+          <td v-for="day in daysInPeriod" :key="day.date" class="text-center"
+              :class="{ 'weekend-column': day.isWeekend }">
             {{ calculateDailyTotal(day.date).toFixed(1) }}
           </td>
           <td class="font-weight-bold text-center">
@@ -197,7 +215,7 @@ export default {
       // Add a column for each day
       this.daysInPeriod.forEach(day => {
         headers.push({
-          text: `${day.day}, ${month} ${day.dayNumber}`,
+          text: day.formatted,
           value: `day${day.index}`,
           align: 'center',
           width: '80px',
