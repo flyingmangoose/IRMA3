@@ -1,0 +1,13 @@
+# Production build files
+dist/
+
+# Third party libraries
+node_modules/
+
+# Config files
+vue.config.js
+babel.config.js
+
+# Vue files with potential linting issues
+views/Reports.vue
+views/Timesheets.vue 

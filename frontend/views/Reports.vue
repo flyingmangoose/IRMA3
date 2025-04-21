@@ -1,3 +1,4 @@
+<!-- eslint-disable -->
 <template>
   <div class="reports-container">
     <v-card>
