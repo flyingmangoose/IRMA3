@@ -840,6 +840,8 @@ export default {
   
   mounted() {
     this.fetchData();
+    // Make sure initial tab is seen as active
+    this.activeTab = 0;
   },
   
   methods: {
@@ -859,7 +861,11 @@ export default {
     generateReport() {
       this.loading = true;
       
+      // Simulate API delay
       setTimeout(() => {
+        // For mock data, regenerate data to simulate refreshing the report
+        this.generateMockTimeEntries();
+        this.generateMockScheduledWork();
         this.loading = false;
       }, 800);
     },
@@ -1185,6 +1191,119 @@ export default {
       if (percentage <= 70) return 'success';
       if (percentage <= 90) return 'warning';
       return 'error';
+    },
+    
+    // Get array of months in the selected date range for past data
+    getMonthsInRange() {
+      if (!this.dates || this.dates.length < 2) return [];
+      
+      const [startDate, endDate] = this.dates;
+      const start = moment(startDate).startOf('month');
+      const end = moment(endDate).endOf('month');
+      
+      const months = [];
+      let current = start.clone();
+      
+      while (current.isSameOrBefore(end)) {
+        months.push(current.clone());
+        current.add(1, 'month');
+      }
+      
+      return months;
+    },
+
+    // Calculate hours used per month for a project
+    calculateProjectHoursUsed(projectId, months) {
+      return months.map(month => {
+        const monthStart = month.clone().startOf('month').format('YYYY-MM-DD');
+        const monthEnd = month.clone().endOf('month').format('YYYY-MM-DD');
+        
+        return this.timeEntries
+          .filter(entry => entry.projectId === projectId && 
+                          entry.date >= monthStart && 
+                          entry.date <= monthEnd)
+          .reduce((total, entry) => total + entry.hours, 0);
+      });
+    },
+    
+    // Calculate billable hours for a resource
+    calculateResourceBillableHours(resourceId) {
+      return this.timeEntries
+        .filter(entry => entry.resourceId === resourceId && 
+                        entry.billable &&
+                        entry.date >= this.dates[0] && 
+                        entry.date <= this.dates[1])
+        .reduce((total, entry) => total + entry.hours, 0);
+    },
+    
+    // Calculate available hours for a resource
+    calculateResourceAvailableHours(resourceId) {
+      if (!this.dates || this.dates.length < 2) return 0;
+      
+      const start = moment(this.dates[0]);
+      const end = moment(this.dates[1]);
+      const workingDays = this.countWorkingDays(start, end);
+      
+      // Assuming 8 hours per working day
+      return workingDays * 8;
+    },
+    
+    // Count working days (Mon-Fri) in a date range
+    countWorkingDays(start, end) {
+      let count = 0;
+      let current = start.clone();
+      
+      while (current.isSameOrBefore(end)) {
+        const day = current.day();
+        if (day !== 0 && day !== 6) { // Skip weekends
+          count++;
+        }
+        current.add(1, 'day');
+      }
+      
+      return count;
+    },
+
+    // Calculate monthly utilization data for chart
+    calculateMonthlyUtilization() {
+      const months = this.getMonthsInRange();
+      const monthLabels = months.map(m => m.format('MMM YYYY'));
+      
+      // Calculate total billable and available hours per month
+      const utilizationByMonth = months.map(month => {
+        const monthStart = month.clone().startOf('month').format('YYYY-MM-DD');
+        const monthEnd = month.clone().endOf('month').format('YYYY-MM-DD');
+        
+        const billableHours = this.timeEntries
+          .filter(entry => entry.billable && 
+                          entry.date >= monthStart && 
+                          entry.date <= monthEnd)
+          .reduce((total, entry) => total + entry.hours, 0);
+        
+        const workingDays = this.countWorkingDays(month.clone().startOf('month'), month.clone().endOf('month'));
+        const availableHours = workingDays * 8 * this.resources.length;
+        
+        return Math.round((billableHours / availableHours) * 100);
+      });
+      
+      return {
+        labels: monthLabels,
+        datasets: [{
+          label: 'Monthly Utilization',
+          data: utilizationByMonth
+        }]
+      };
+    },
+    
+    // Calculate utilization data by resource
+    calculateResourceUtilization() {
+      return {
+        labels: this.resources.map(r => r.name),
+        datasets: [{
+          label: 'Resource Utilization',
+          data: this.utilizationTableData.map(r => r.utilization)
+        }]
+      };
     }
   }
 };
