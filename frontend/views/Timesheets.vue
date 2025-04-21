@@ -350,6 +350,7 @@
 </template>
 
 <script>
+// eslint-disable-next-line no-unused-vars
 import axios from 'axios';
 import { mapGetters } from 'vuex';
 import moment from 'moment';
