@@ -69,9 +69,9 @@
                 <div class="hour-cell">
                   <v-text-field
                     v-if="!day.isWeekend"
-                    v-model="timeEntries[project.id][day.date]"
+                    v-model="timeEntries[project.id][day.date].hours"
                     type="number"
-                    step="0.5"
+                    step="0.25"
                     min="0"
                     max="24"
                     hide-details
@@ -80,13 +80,22 @@
                     @blur="validateAndSave(project.id, day.date)"
                     @focus="onFocus"
                   ></v-text-field>
+                  <v-icon 
+                    v-if="!day.isWeekend && timeEntries[project.id][day.date].hours > 0"
+                    small
+                    :color="timeEntries[project.id][day.date].comment ? 'success' : 'error'"
+                    @click="openCommentDialog(project.id, day.date)"
+                    class="comment-icon"
+                  >
+                    {{ timeEntries[project.id][day.date].comment ? 'mdi-comment-text' : 'mdi-comment-alert' }}
+                  </v-icon>
                   <div v-else class="weekend-cell">
                     <!-- Weekend cell -->
                   </div>
                 </div>
               </td>
               <td class="text-center font-weight-bold">
-                {{ calculateProjectTotal(project.id).toFixed(1) }}
+                {{ calculateProjectTotal(project.id).toFixed(2) }}
               </td>
             </tr>
             <!-- Add project row -->
@@ -112,16 +121,71 @@
                 class="text-center"
                 :class="{ 'weekend-column': day.isWeekend }"
               >
-                {{ calculateDailyTotal(day.date).toFixed(1) }}
+                {{ calculateDailyTotal(day.date).toFixed(2) }}
               </td>
               <td class="font-weight-bold text-center">
-                {{ calculateTotalHours().toFixed(1) }}
+                {{ calculateTotalHours().toFixed(2) }}
               </td>
             </tr>
           </tbody>
         </template>
       </v-simple-table>
     </v-card>
+
+    <!-- Comment dialog -->
+    <v-dialog v-model="commentDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Time Entry Details</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row>
+              <v-col cols="12">
+                <v-text-field
+                  v-model="currentEntry.hours"
+                  label="Hours"
+                  type="number"
+                  step="0.25"
+                  min="0"
+                  max="24"
+                  required
+                ></v-text-field>
+              </v-col>
+              <v-col cols="12">
+                <v-textarea
+                  v-model="currentEntry.comment"
+                  label="Comment"
+                  placeholder="What did you work on? (Required)"
+                  required
+                  auto-grow
+                  rows="3"
+                  counter="500"
+                ></v-textarea>
+              </v-col>
+            </v-row>
+            <v-alert
+              v-if="commentError"
+              type="error"
+              outlined
+              dense
+              class="mt-2"
+            >
+              {{ commentError }}
+            </v-alert>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="error" text @click="commentDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn color="primary" text @click="saveComment">
+            Save
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
@@ -144,11 +208,21 @@ export default {
       projects: [], // All available projects
       timesheetProjects: [], // Projects added to timesheet
       
-      // Store time entries in format: { projectId: { 'YYYY-MM-DD': hours } }
+      // Store time entries in format: { projectId: { 'YYYY-MM-DD': { hours: number, comment: string } } }
       timeEntries: {},
       
       // Track dirty state for saving
-      isDirty: false
+      isDirty: false,
+      
+      // Comment dialog
+      commentDialog: false,
+      commentError: '',
+      currentEntry: {
+        projectId: null,
+        date: null,
+        hours: 0,
+        comment: ''
+      }
     };
   },
   
@@ -283,7 +357,10 @@ export default {
           if (!this.timeEntries[this.timesheetProjects[0].id]) {
             this.timeEntries[this.timesheetProjects[0].id] = {};
           }
-          this.timeEntries[this.timesheetProjects[0].id][testDate] = '1';
+          this.timeEntries[this.timesheetProjects[0].id][testDate] = {
+            hours: '8',
+            comment: 'Initial project setup and planning meetings'
+          };
         }
         
         this.loading = false;
@@ -298,7 +375,10 @@ export default {
             if (!this.timeEntries[entry.projectId]) {
               this.timeEntries[entry.projectId] = {};
             }
-            this.timeEntries[entry.projectId][entry.date] = entry.hours.toString();
+            this.timeEntries[entry.projectId][entry.date] = {
+              hours: entry.hours.toString(),
+              comment: entry.comment || ''
+            };
           });
         })
         .catch(error => {
@@ -339,8 +419,8 @@ export default {
       if (!this.timeEntries[projectId]) return 0;
       
       return Object.values(this.timeEntries[projectId])
-        .reduce((total, hours) => {
-          return total + (parseFloat(hours) || 0);
+        .reduce((total, entry) => {
+          return total + (parseFloat(entry.hours) || 0);
         }, 0);
     },
     
@@ -349,7 +429,9 @@ export default {
       let total = 0;
       
       Object.keys(this.timeEntries).forEach(projectId => {
-        total += parseFloat(this.timeEntries[projectId][date] || 0);
+        if (this.timeEntries[projectId][date]) {
+          total += parseFloat(this.timeEntries[projectId][date].hours || 0);
+        }
       });
       
       return total;
@@ -366,19 +448,83 @@ export default {
       return total;
     },
     
-    // Validate and save an entry
-    validateAndSave(projectId, date) {
-      const value = this.timeEntries[projectId][date];
-      
-      // Basic validation
-      if (value && (isNaN(parseFloat(value)) || parseFloat(value) < 0)) {
-        this.timeEntries[projectId][date] = '';
-      } else if (value && parseFloat(value) > 24) {
-        this.timeEntries[projectId][date] = '24';
+    // Open comment dialog
+    openCommentDialog(projectId, date) {
+      // Initialize entry if it doesn't exist
+      if (!this.timeEntries[projectId][date]) {
+        this.timeEntries[projectId][date] = { hours: '0', comment: '' };
       }
       
-      // If empty string, remove the entry
-      if (value === '') {
+      this.currentEntry = {
+        projectId,
+        date,
+        hours: this.timeEntries[projectId][date].hours,
+        comment: this.timeEntries[projectId][date].comment || ''
+      };
+      
+      this.commentError = '';
+      this.commentDialog = true;
+    },
+    
+    // Save comment
+    saveComment() {
+      // Validate input
+      if (!this.currentEntry.hours || parseFloat(this.currentEntry.hours) <= 0) {
+        this.commentError = 'Hours must be greater than 0';
+        return;
+      }
+      
+      if (!this.currentEntry.comment.trim()) {
+        this.commentError = 'Comment is required';
+        return;
+      }
+      
+      // Update the entry
+      const { projectId, date, hours, comment } = this.currentEntry;
+      
+      // Ensure the time entry structure exists
+      if (!this.timeEntries[projectId]) {
+        this.timeEntries[projectId] = {};
+      }
+      if (!this.timeEntries[projectId][date]) {
+        this.timeEntries[projectId][date] = { hours: '0', comment: '' };
+      }
+      
+      // Update the entry
+      this.timeEntries[projectId][date] = {
+        hours: parseFloat(hours) > 24 ? '24' : hours,
+        comment: comment.trim()
+      };
+      
+      this.commentDialog = false;
+      this.isDirty = true;
+      this.saved = false;
+    },
+    
+    // Validate and save an entry
+    validateAndSave(projectId, date) {
+      // Ensure the entry exists
+      if (!this.timeEntries[projectId][date]) {
+        this.timeEntries[projectId][date] = { hours: '0', comment: '' };
+      }
+      
+      const hours = this.timeEntries[projectId][date].hours;
+      
+      // Basic validation
+      if (hours && (isNaN(parseFloat(hours)) || parseFloat(hours) < 0)) {
+        this.timeEntries[projectId][date].hours = '0';
+      } else if (hours && parseFloat(hours) > 24) {
+        this.timeEntries[projectId][date].hours = '24';
+      }
+      
+      // If hours are greater than 0, prompt for a comment if none exists
+      if (parseFloat(this.timeEntries[projectId][date].hours) > 0 && 
+          !this.timeEntries[projectId][date].comment) {
+        this.openCommentDialog(projectId, date);
+      }
+      
+      // If hours are 0, remove the entry
+      if (parseFloat(this.timeEntries[projectId][date].hours) === 0) {
         this.$delete(this.timeEntries[projectId], date);
       }
       
@@ -396,17 +542,38 @@ export default {
     saveTimesheet() {
       if (!this.isDirty) return;
       
+      // Check if all entries have comments
+      let missingComments = false;
+      
+      Object.keys(this.timeEntries).forEach(projectId => {
+        Object.keys(this.timeEntries[projectId]).forEach(date => {
+          const entry = this.timeEntries[projectId][date];
+          if (parseFloat(entry.hours) > 0 && !entry.comment) {
+            missingComments = true;
+            // Highlight the entry that needs a comment
+            this.openCommentDialog(projectId, date);
+          }
+        });
+      });
+      
+      if (missingComments) {
+        // Let the dialog handle the error
+        return;
+      }
+      
       // Prepare data for API
       const entries = [];
       
       Object.keys(this.timeEntries).forEach(projectId => {
         Object.keys(this.timeEntries[projectId]).forEach(date => {
-          const hours = parseFloat(this.timeEntries[projectId][date]);
+          const entry = this.timeEntries[projectId][date];
+          const hours = parseFloat(entry.hours);
           if (hours > 0) {
             entries.push({
               projectId,
               date,
-              hours
+              hours,
+              comment: entry.comment
             });
           }
         });
@@ -461,6 +628,7 @@ export default {
 
 .timesheet-table >>> .hour-cell {
   padding: 0 2px;
+  position: relative;
 }
 
 .timesheet-table >>> .hour-input {
@@ -490,5 +658,13 @@ export default {
 
 .add-project-btn {
   width: 100%;
+}
+
+.comment-icon {
+  position: absolute;
+  top: 0;
+  right: 0;
+  cursor: pointer;
+  margin: 4px;
 }
 </style>

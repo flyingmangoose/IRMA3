@@ -28,7 +28,10 @@ const routes = [
     name: 'Timesheets',
     component: () => import('../views/Timesheets.vue'),
     // Removed requiresAuth to allow direct access
-    meta: { }
+    meta: { 
+      title: 'Project Timesheets',
+      description: 'Track time spent on projects with required comments for each entry'
+    }
   },
   {
     path: '/projects',

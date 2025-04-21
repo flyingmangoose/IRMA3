@@ -201,7 +201,7 @@
                 </div>
                 <div v-else>
                   <v-card outlined class="pa-4">
-                    <div v-for="(resource, index) in utilizationTableData" :key="resource.id" class="mb-3">
+                    <div v-for="resource in utilizationTableData" :key="resource.id" class="mb-3">
                       <div class="d-flex justify-space-between mb-1">
                         <div>{{ resource.name }}</div>
                         <div>{{ resource.utilization }}%</div>
@@ -619,6 +619,7 @@ export default {
           for (let i = 0; i < entriesCount; i++) {
             const day = Math.floor(Math.random() * daysInMonth) + 1;
             const date = month.clone().date(day).format('YYYY-MM-DD');
+            // eslint-disable-next-line no-unused-vars
             const resourceIndex = Math.floor(Math.random() * this.resources.length);
             const resourceId = this.resources[resourceIndex].id;
             
@@ -685,6 +686,7 @@ export default {
     
     // Calculate available hours for a resource
     calculateResourceAvailableHours(resourceId) {
+      // eslint-disable-next-line no-unused-vars
       if (!this.dates || this.dates.length < 2) return 0;
       
       const start = moment(this.dates[0]);
