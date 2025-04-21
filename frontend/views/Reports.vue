@@ -621,6 +621,7 @@ export default {
             const date = month.clone().date(day).format('YYYY-MM-DD');
             // eslint-disable-next-line no-unused-vars
             const resourceIndex = Math.floor(Math.random() * this.resources.length);
+            // eslint-disable-next-line no-unused-vars
             const resourceId = this.resources[resourceIndex].id;
             
             // Hours more likely to be higher for later months to show a trend
