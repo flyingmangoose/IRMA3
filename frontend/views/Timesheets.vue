@@ -8,7 +8,7 @@
         <v-icon class="ml-2">mdi-calendar</v-icon>
       </div>
       <v-menu offset-y>
-        <template v-slot:activator="{ on, attrs }">
+        <template #activator="{ on, attrs }">
           <v-btn
             color="primary"
             v-bind="attrs"
@@ -40,95 +40,88 @@
       Saved
     </v-chip>
 
-    <v-data-table
-      :headers="headers"
-      :items="timesheetProjects"
-      hide-default-footer
-      disable-pagination
-      disable-sort
-      class="elevation-1 timesheet-table"
-      :items-per-page="-1"
-    >
-      <!-- Project name column -->
-      <template v-slot:item.project="{ item }">
-        {{ item.name }}
-      </template>
-
-      <!-- Total column -->
-      <template v-slot:item.total="{ item }">
-        <div class="font-weight-bold">
-          {{ calculateProjectTotal(item.id).toFixed(1) }}
-        </div>
-      </template>
-
-      <!-- Handle each day column through item template override -->
-      <template v-slot:item="{ item, headers, index }">
-        <tr>
-          <td>{{ item.name }}</td>
-          
-          <!-- Loop through days and render appropriate cells -->
-          <td v-for="day in daysInPeriod" :key="`${item.id}-${day.date}`" 
-              :class="{ 'weekend-column': day.isWeekend }">
-            <div class="hour-cell">
-              <v-text-field
-                v-if="!day.isWeekend"
-                v-model="timeEntries[item.id][day.date]"
-                type="number"
-                step="0.5"
-                min="0"
-                max="24"
-                hide-details
-                single-line
-                class="hour-input"
-                @blur="validateAndSave(item.id, day.date)"
-                @focus="onFocus"
-              ></v-text-field>
-              <div v-else class="weekend-cell">
-                <!-- Weekend cell -->
-              </div>
-            </div>
-          </td>
-          
-          <!-- Total column -->
-          <td class="text-center">
-            <div class="font-weight-bold">
-              {{ calculateProjectTotal(item.id).toFixed(1) }}
-            </div>
-          </td>
-        </tr>
-      </template>
-
-      <!-- Add Project row -->
-      <template v-slot:body.append>
-        <tr>
-          <td colspan="100%" class="text-center pa-2">
-            <v-btn 
-              text 
-              color="primary" 
-              @click="showAddProjectMenu"
-              class="add-project-btn"
-            >
-              <v-icon left>mdi-plus</v-icon>
-              Add Project to Timesheet
-            </v-btn>
-          </td>
-        </tr>
-      </template>
-
-      <!-- Daily total row -->
-      <template v-slot:footer>
-        <tr class="daily-total-row">
-          <td class="font-weight-bold">Daily Total</td>
-          <td v-for="day in daysInPeriod" :key="day.date" class="text-center"
-              :class="{ 'weekend-column': day.isWeekend }">
-            {{ calculateDailyTotal(day.date).toFixed(1) }}
-          </td>
-          <td class="font-weight-bold text-center">
-            {{ calculateTotalHours().toFixed(1) }}
-          </td>
-        </tr>
-      </template>
-    </v-data-table>
+    <!-- Create a simple table instead of using v-data-table with complex slots -->
+    <v-card class="elevation-1">
+      <v-simple-table class="timesheet-table">
+        <template #default>
+          <thead>
+            <tr>
+              <th class="text-left">Project</th>
+              <th 
+                v-for="day in daysInPeriod" 
+                :key="day.date"
+                class="text-center"
+                :class="{ 'weekend-column': day.isWeekend }"
+              >
+                {{ day.formatted }}
+              </th>
+              <th class="text-center">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="project in timesheetProjects" :key="project.id">
+              <td>{{ project.name }}</td>
+              <td 
+                v-for="day in daysInPeriod" 
+                :key="`${project.id}-${day.date}`"
+                :class="{ 'weekend-column': day.isWeekend }"
+              >
+                <div class="hour-cell">
+                  <v-text-field
+                    v-if="!day.isWeekend"
+                    v-model="timeEntries[project.id][day.date]"
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    max="24"
+                    hide-details
+                    single-line
+                    class="hour-input"
+                    @blur="validateAndSave(project.id, day.date)"
+                    @focus="onFocus"
+                  ></v-text-field>
+                  <div v-else class="weekend-cell">
+                    <!-- Weekend cell -->
+                  </div>
+                </div>
+              </td>
+              <td class="text-center font-weight-bold">
+                {{ calculateProjectTotal(project.id).toFixed(1) }}
+              </td>
+            </tr>
+            <!-- Add project row -->
+            <tr>
+              <td colspan="100%" class="text-center pa-2">
+                <v-btn 
+                  text 
+                  color="primary" 
+                  @click="showAddProjectMenu"
+                  class="add-project-btn"
+                >
+                  <v-icon left>mdi-plus</v-icon>
+                  Add Project to Timesheet
+                </v-btn>
+              </td>
+            </tr>
+            <!-- Daily total row -->
+            <tr class="daily-total-row">
+              <td class="font-weight-bold">Daily Total</td>
+              <td 
+                v-for="day in daysInPeriod" 
+                :key="day.date" 
+                class="text-center"
+                :class="{ 'weekend-column': day.isWeekend }"
+              >
+                {{ calculateDailyTotal(day.date).toFixed(1) }}
+              </td>
+              <td class="font-weight-bold text-center">
+                {{ calculateTotalHours().toFixed(1) }}
+              </td>
+            </tr>
+          </tbody>
+        </template>
+      </v-simple-table>
+    </v-card>
   </div>
 </template>
 
@@ -203,37 +196,6 @@ export default {
       }
       
       return days;
-    },
-    
-    // Generate table headers
-    headers() {
-      // Start with project column
-      const headers = [
-        { text: 'Project', value: 'project', width: '200px' }
-      ];
-      
-      // Add a column for each day
-      this.daysInPeriod.forEach(day => {
-        headers.push({
-          text: day.formatted,
-          value: `day${day.index}`,
-          align: 'center',
-          width: '80px',
-          sortable: false,
-          cellClass: day.isWeekend ? 'weekend-column' : '',
-          class: day.isWeekend ? 'weekend-column' : ''
-        });
-      });
-      
-      // Add total column
-      headers.push({
-        text: 'Total',
-        value: 'total',
-        align: 'center',
-        width: '80px'
-      });
-      
-      return headers;
     }
   },
   
