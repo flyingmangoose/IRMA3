@@ -33,7 +33,20 @@
           'items-per-page-options': [5, 10, 15, 20],
           'items-per-page-text': 'Projects per page'
         }"
+        @click:row="viewProject"
+        style="cursor: pointer"
       >
+        <!-- Project Name column - make clickable -->
+        <template v-slot:[`item.name`]="{ item }">
+          <a 
+            href="#" 
+            class="project-link"
+            @click.prevent="viewProject(item)"
+          >
+            {{ item.name }}
+          </a>
+        </template>
+
         <!-- Client column -->
         <template v-slot:[`item.client`]="{ item }">
           {{ item.client }}
@@ -1234,5 +1247,15 @@ export default {
 <style scoped>
 .projects-container {
   padding: 20px;
+}
+
+.project-link {
+  color: #1976D2;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.project-link:hover {
+  text-decoration: underline;
 }
 </style>
