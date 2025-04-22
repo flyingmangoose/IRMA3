@@ -7,41 +7,49 @@
         {{ dateRangeText }}
         <v-icon class="ml-2">mdi-calendar</v-icon>
       </div>
-      <v-menu offset-y ref="projectMenu">
-        <template #activator="{ on, attrs }">
-          <v-btn
-            color="primary"
-            v-bind="attrs"
-            v-on="on"
-            class="text-none"
-          >
-            Add Project
-            <v-icon right>mdi-chevron-down</v-icon>
-          </v-btn>
-        </template>
-        <v-list>
-          <v-list-item
-            v-for="project in availableProjects"
-            :key="project.id"
-            @click="addProjectToTimesheet(project)"
-          >
-            <v-list-item-title>{{ project.name }}</v-list-item-title>
-          </v-list-item>
-        </v-list>
-      </v-menu>
+      <v-btn
+        color="primary"
+        @click="projectSelectionDialog = true"
+        class="text-none"
+      >
+        Add Project
+        <v-icon right>mdi-plus</v-icon>
+      </v-btn>
     </div>
 
-    <v-chip
-      color="success"
+    <div class="mb-4">
+      <v-chip
+        color="success"
+        outlined
+        class="mr-2"
+        v-if="saved"
+      >
+        Saved
+      </v-chip>
+      <v-chip
+        :color="getStatusColor(timesheetStatus)"
+        class="mr-2"
+      >
+        Status: {{ timesheetStatus }}
+      </v-chip>
+    </div>
+
+    <v-alert
+      type="info"
+      text
       outlined
       class="mb-4"
-      v-if="saved"
     >
-      Saved
-    </v-chip>
+      <p><strong>Instructions:</strong></p>
+      <ul>
+        <li>Click "Add Project" to add projects to your timesheet</li>
+        <li>Enter hours for each day (in 0.25 increments)</li>
+        <li>Add a comment for each time entry</li>
+        <li>Click "Submit" when your timesheet is complete</li>
+      </ul>
+    </v-alert>
 
-    <!-- Create a simple table instead of using v-data-table with complex slots -->
-    <v-card class="elevation-1">
+    <v-card class="elevation-1 mb-4">
       <v-simple-table class="timesheet-table">
         <template #default>
           <thead>
@@ -66,9 +74,8 @@
                 :key="`${project.id}-${day.date}`"
                 :class="{ 'weekend-column': day.isWeekend }"
               >
-                <div class="hour-cell">
+                <div class="hour-cell" v-if="!day.isWeekend">
                   <v-text-field
-                    v-if="!day.isWeekend"
                     v-model="timeEntries[project.id][day.date].hours"
                     type="number"
                     step="0.25"
@@ -77,43 +84,42 @@
                     hide-details
                     single-line
                     class="hour-input"
-                    @blur="validateAndSave(project.id, day.date)"
-                    @focus="onFocus"
                   ></v-text-field>
-                  <v-icon 
-                    v-if="!day.isWeekend && timeEntries[project.id][day.date].hours > 0"
-                    small
-                    :color="timeEntries[project.id][day.date].comment ? 'success' : 'error'"
+                  <v-btn
+                    x-small
+                    icon
+                    color="primary"
                     @click="openCommentDialog(project.id, day.date)"
-                    class="comment-icon"
+                    title="Add comment"
+                    class="comment-btn"
                   >
-                    {{ timeEntries[project.id][day.date].comment ? 'mdi-comment-text' : 'mdi-comment-alert' }}
-                  </v-icon>
-                  <div v-else class="weekend-cell">
-                    <!-- Weekend cell -->
-                  </div>
+                    <v-icon x-small>{{ timeEntries[project.id][day.date].comment ? 'mdi-comment-check' : 'mdi-comment-plus' }}</v-icon>
+                  </v-btn>
+                </div>
+                <div v-else class="weekend-cell">
+                  <!-- Weekend cell -->
                 </div>
               </td>
               <td class="text-center font-weight-bold">
                 {{ calculateProjectTotal(project.id).toFixed(2) }}
               </td>
             </tr>
-            <!-- Add project row -->
-            <tr>
-              <td colspan="100%" class="text-center pa-2">
+            
+            <tr v-if="timesheetProjects.length === 0">
+              <td colspan="100%" class="text-center pa-4">
+                <p>No projects added to this timesheet yet.</p>
                 <v-btn 
-                  text 
                   color="primary" 
-                  @click="showAddProjectMenu"
-                  class="add-project-btn"
+                  @click="projectSelectionDialog = true"
+                  class="mt-2"
                 >
                   <v-icon left>mdi-plus</v-icon>
-                  Add Project to Timesheet
+                  Add Your First Project
                 </v-btn>
               </td>
             </tr>
-            <!-- Daily total row -->
-            <tr class="daily-total-row">
+            
+            <tr class="daily-total-row" v-if="timesheetProjects.length > 0">
               <td class="font-weight-bold">Daily Total</td>
               <td 
                 v-for="day in daysInPeriod" 
@@ -132,49 +138,79 @@
       </v-simple-table>
     </v-card>
 
-    <!-- Submission and approval card -->
-    <v-card class="mt-4 elevation-1">
-      <v-card-text>
-        <div class="d-flex align-center">
-          <div>
-            <div class="text-h6">Total Hours: {{ calculateTotalHours().toFixed(2) }}</div>
-            <div class="text-caption">Status: 
-              <v-chip x-small :color="getStatusColor(timesheetStatus)" class="ml-2">
-                {{ timesheetStatus }}
-              </v-chip>
-            </div>
-          </div>
-          <v-spacer></v-spacer>
-          <v-btn 
-            color="primary" 
-            :disabled="!canSubmitTimesheet" 
-            @click="showSubmitDialog"
-          >
-            {{ submissionAction }}
-          </v-btn>
-          <v-btn 
-            color="success" 
-            class="ml-2" 
-            v-if="canApproveTimesheet" 
-            :disabled="timesheetStatus !== 'Submitted'" 
-            @click="showApprovalDialog"
-          >
-            Approve
-          </v-btn>
-          <v-btn 
-            color="error" 
-            class="ml-2" 
-            v-if="canApproveTimesheet" 
-            :disabled="timesheetStatus !== 'Submitted'" 
-            @click="showRejectionDialog"
-          >
-            Reject
-          </v-btn>
-        </div>
-      </v-card-text>
-    </v-card>
+    <div class="d-flex justify-space-between mb-4">
+      <v-btn 
+        color="primary" 
+        outlined
+        @click="projectSelectionDialog = true"
+      >
+        <v-icon left>mdi-plus</v-icon>
+        Add Another Project
+      </v-btn>
+      
+      <div>
+        <v-btn 
+          color="success" 
+          @click="validateAndSaveAll"
+          class="mr-2"
+        >
+          <v-icon left>mdi-content-save</v-icon>
+          Save Timesheet
+        </v-btn>
+        
+        <v-btn 
+          color="primary" 
+          :disabled="!canSubmitTimesheet" 
+          @click="showSubmitDialog"
+        >
+          <v-icon left>mdi-send</v-icon>
+          {{ submissionAction }}
+        </v-btn>
+      </div>
+    </div>
 
-    <!-- Comment dialog -->
+    <v-dialog v-model="projectSelectionDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Add Project to Timesheet</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row v-if="availableProjects.length > 0">
+              <v-col cols="12">
+                <v-radio-group v-model="selectedProjectId">
+                  <v-radio
+                    v-for="project in availableProjects"
+                    :key="project.id"
+                    :label="project.name"
+                    :value="project.id"
+                  ></v-radio>
+                </v-radio-group>
+              </v-col>
+            </v-row>
+            <v-row v-else>
+              <v-col cols="12">
+                <p class="text-center">No available projects to add. Please contact your administrator.</p>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey darken-1" text @click="projectSelectionDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn 
+            color="primary"
+            @click="addSelectedProject"
+            :disabled="!selectedProjectId || availableProjects.length === 0"
+          >
+            Add Project
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-dialog v-model="commentDialog" max-width="500px">
       <v-card>
         <v-card-title>
@@ -219,17 +255,16 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="error" text @click="commentDialog = false">
+          <v-btn color="grey darken-1" text @click="commentDialog = false">
             Cancel
           </v-btn>
-          <v-btn color="primary" text @click="saveComment">
-            Save
+          <v-btn color="primary" @click="saveComment">
+            Save Entry
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Submit Timesheet Dialog -->
     <v-dialog v-model="submitDialog" max-width="500px">
       <v-card>
         <v-card-title>
@@ -254,17 +289,16 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="error" text @click="submitDialog = false">
+          <v-btn color="grey darken-1" text @click="submitDialog = false">
             Cancel
           </v-btn>
-          <v-btn color="primary" text @click="submitTimesheet">
+          <v-btn color="primary" @click="submitTimesheet">
             Submit for Approval
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Approval Dialog -->
     <v-dialog v-model="approvalDialog" max-width="500px">
       <v-card>
         <v-card-title>
@@ -290,17 +324,16 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="error" text @click="approvalDialog = false">
+          <v-btn color="grey darken-1" text @click="approvalDialog = false">
             Cancel
           </v-btn>
-          <v-btn color="success" text @click="approveTimesheet">
+          <v-btn color="success" @click="approveTimesheet">
             Approve Timesheet
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
 
-    <!-- Rejection Dialog -->
     <v-dialog v-model="rejectionDialog" max-width="500px">
       <v-card>
         <v-card-title>
@@ -336,56 +369,11 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="rejectionDialog = false">
+          <v-btn color="grey darken-1" text @click="rejectionDialog = false">
             Cancel
           </v-btn>
-          <v-btn color="error" text @click="rejectTimesheet">
+          <v-btn color="error" @click="rejectTimesheet">
             Reject Timesheet
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- Add Project Selection Dialog (fallback) -->
-    <v-dialog v-model="projectSelectionDialog" max-width="500px">
-      <v-card>
-        <v-card-title>
-          <span class="headline">Add Project to Timesheet</span>
-        </v-card-title>
-        <v-card-text>
-          <v-container>
-            <v-row v-if="availableProjects.length > 0">
-              <v-col cols="12">
-                <v-select
-                  v-model="selectedProjectId"
-                  :items="availableProjects"
-                  item-text="name"
-                  item-value="id"
-                  label="Select Project"
-                  :rules="[v => !!v || 'Project is required']"
-                  required
-                ></v-select>
-              </v-col>
-            </v-row>
-            <v-row v-else>
-              <v-col cols="12">
-                <p class="text-center">No available projects to add.</p>
-              </v-col>
-            </v-row>
-          </v-container>
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="projectSelectionDialog = false">
-            Cancel
-          </v-btn>
-          <v-btn 
-            color="blue darken-1" 
-            text 
-            @click="addSelectedProject"
-            :disabled="!selectedProjectId || availableProjects.length === 0"
-          >
-            Add
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -480,7 +468,7 @@ export default {
         'executive': 5
       },
       
-      // Add Project Selection Dialog (fallback)
+      // Add Project Selection Dialog
       projectSelectionDialog: false,
       selectedProjectId: null
     };
@@ -907,31 +895,6 @@ export default {
       this.selectedProjectId = null;
     },
     
-    // Show the add project menu
-    showAddProjectMenu() {
-      // Open the dropdown menu programmatically
-      const addProjectButton = document.querySelector(".v-menu");
-      if (addProjectButton) {
-        // Get the v-menu component and open it
-        const menu = this.$refs.projectMenu;
-        if (menu) {
-          menu.isActive = true;
-        } else {
-          // Alternative approach - click the button to open the menu
-          document.querySelector('.v-menu button').click();
-        }
-      } else {
-        // If we can't find the menu component, show available projects in a dialog
-        this.showProjectSelectionDialog();
-      }
-    },
-    
-    // Show a dialog to select projects (as a fallback)
-    showProjectSelectionDialog() {
-      // Create a dialog for project selection if dropdown isn't working
-      this.$set(this, 'projectSelectionDialog', true);
-    },
-    
     // Calculate total hours for a project
     calculateProjectTotal(projectId) {
       if (!this.timeEntries[projectId]) return 0;
@@ -1168,6 +1131,52 @@ export default {
       }
       
       this.projectSelectionDialog = false;
+    },
+    
+    // Add method to validate and save all entries at once
+    validateAndSaveAll() {
+      let hasErrors = false;
+      let missingComments = false;
+      
+      // Check all entries
+      Object.keys(this.timeEntries).forEach(projectId => {
+        Object.keys(this.timeEntries[projectId]).forEach(date => {
+          const entry = this.timeEntries[projectId][date];
+          
+          // Skip empty entries
+          if (!entry.hours || entry.hours === '') return;
+          
+          const numericHours = parseFloat(entry.hours);
+          
+          // Validate hours
+          if (isNaN(numericHours) || numericHours < 0) {
+            hasErrors = true;
+            return;
+          }
+          
+          // Round to nearest 0.25
+          const roundedHours = Math.round(numericHours * 4) / 4;
+          this.timeEntries[projectId][date].hours = roundedHours.toString();
+          
+          // Check for comments
+          if (numericHours > 0 && !entry.comment) {
+            missingComments = true;
+          }
+        });
+      });
+      
+      if (hasErrors) {
+        this.showSnackbar('Some entries have invalid hours. Please check your timesheet.', 'error');
+        return;
+      }
+      
+      if (missingComments) {
+        this.showSnackbar('Some entries are missing comments. Please add comments to all entries.', 'warning');
+      } else {
+        // Save timesheet
+        this.saveTimesheet();
+        this.showSnackbar('Timesheet saved successfully', 'success');
+      }
     }
   }
 };
@@ -1181,10 +1190,13 @@ export default {
 .timesheet-table >>> .hour-cell {
   padding: 0 2px;
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .timesheet-table >>> .hour-input {
   text-align: center;
+  width: calc(100% - 24px);
 }
 
 .timesheet-table >>> .v-text-field input {
@@ -1208,15 +1220,8 @@ export default {
   background-color: rgba(0, 0, 0, 0.03);
 }
 
-.add-project-btn {
-  width: 100%;
-}
-
-.comment-icon {
-  position: absolute;
-  top: 0;
-  right: 0;
-  cursor: pointer;
-  margin: 4px;
+.comment-btn {
+  margin-left: 4px;
+  min-width: auto !important;
 }
 </style>
