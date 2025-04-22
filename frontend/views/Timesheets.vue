@@ -575,8 +575,37 @@ export default {
   methods: {
     initialize() {
       this.fetchProjects();
-      this.fetchTimeEntries();
       this.initializeUser();
+      // Initialize empty timesheet structure
+      this.initializeTimeEntries();
+    },
+    
+    // Initialize empty timesheet entries structure
+    initializeTimeEntries() {
+      // Make sure timeEntries is initialized as an empty object
+      this.timeEntries = {};
+      
+      // Add initial entries for any existing projects
+      this.timesheetProjects.forEach(project => {
+        this.initializeProjectEntries(project.id);
+      });
+    },
+    
+    // Initialize entries for a specific project
+    initializeProjectEntries(projectId) {
+      if (!this.timeEntries[projectId]) {
+        this.timeEntries[projectId] = {};
+      }
+      
+      // Create empty entries for all days in the period
+      this.daysInPeriod.forEach(day => {
+        if (!this.timeEntries[projectId][day.date]) {
+          this.$set(this.timeEntries[projectId], day.date, { 
+            hours: '', 
+            comment: '' 
+          });
+        }
+      });
     },
     
     // Fetch available projects
@@ -593,89 +622,12 @@ export default {
         ];
         
         // Add initial projects to timesheet
-        this.timesheetProjects = [
-          { id: 'alpha', name: 'Project Alpha' },
-          { id: 'beta', name: 'Project Beta' }
-        ];
+        this.timesheetProjects = []; // Start with no projects for simplicity
         
         this.loading = false;
       }, 300);
       
-      // Real implementation would use axios:
-      /*
-      axios.get('/api/projects')
-        .then(response => {
-          this.projects = response.data;
-        })
-        .catch(error => {
-          console.error('Error fetching projects:', error);
-          this.$store.dispatch('setSnackbar', {
-            show: true,
-            text: 'Error loading projects',
-            color: 'error'
-          });
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-      */
-    },
-    
-    // Fetch time entries for the period
-    fetchTimeEntries() {
-      this.loading = true;
-      
-      // Initialize empty entries for each project
-      this.timesheetProjects.forEach(project => {
-        if (!this.timeEntries[project.id]) {
-          this.timeEntries[project.id] = {};
-        }
-      });
-      
-      // Mock data - one test entry
-      setTimeout(() => {
-        // Initialize with a mock entry
-        if (this.timesheetProjects.length > 0) {
-          const testDate = moment(this.startDate).add(3, 'days').format('YYYY-MM-DD');
-          if (!this.timeEntries[this.timesheetProjects[0].id]) {
-            this.timeEntries[this.timesheetProjects[0].id] = {};
-          }
-          this.timeEntries[this.timesheetProjects[0].id][testDate] = {
-            hours: '8',
-            comment: 'Initial project setup and planning meetings'
-          };
-        }
-        
-        this.loading = false;
-      }, 300);
-      
-      // Real implementation:
-      /*
-      axios.get(`/api/timeentries?startDate=${this.startDate}&endDate=${this.endDate}`)
-        .then(response => {
-          // Format entries into our data structure
-          response.data.forEach(entry => {
-            if (!this.timeEntries[entry.projectId]) {
-              this.timeEntries[entry.projectId] = {};
-            }
-            this.timeEntries[entry.projectId][entry.date] = {
-              hours: entry.hours.toString(),
-              comment: entry.comment || ''
-            };
-          });
-        })
-        .catch(error => {
-          console.error('Error fetching time entries:', error);
-          this.$store.dispatch('setSnackbar', {
-            show: true,
-            text: 'Error loading time entries',
-            color: 'error'
-          });
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-      */
+      // Real implementation would use axios as in the original code
     },
     
     // Setup user information
@@ -870,29 +822,24 @@ export default {
     },
     
     // Add a project to the timesheet
-    addProjectToTimesheet(project) {
-      this.timesheetProjects.push(project);
+    addSelectedProject() {
+      if (!this.selectedProjectId || this.availableProjects.length === 0) return;
       
-      // Initialize entries object for this project
-      if (!this.timeEntries[project.id]) {
-        this.timeEntries[project.id] = {};
+      const selectedProject = this.availableProjects.find(p => p.id === this.selectedProjectId);
+      if (selectedProject) {
+        // Push to timesheet projects array
+        this.timesheetProjects.push(selectedProject);
+        
+        // Initialize time entries for this project
+        this.initializeProjectEntries(selectedProject.id);
+        
+        // Show confirmation
+        this.showSnackbar(`Added ${selectedProject.name} to timesheet`, 'success');
       }
       
-      // Initialize all days for this project
-      this.daysInPeriod.forEach(day => {
-        if (!this.timeEntries[project.id][day.date]) {
-          this.timeEntries[project.id][day.date] = { hours: '', comment: '' };
-        }
-      });
-      
-      this.isDirty = true;
-      this.saved = false;
-      
-      // Show feedback to user
-      this.showSnackbar(`Added ${project.name} to timesheet`, 'success');
-      
-      // Reset selected project
+      // Reset selection and close dialog
       this.selectedProjectId = null;
+      this.projectSelectionDialog = false;
     },
     
     // Calculate total hours for a project
@@ -1119,18 +1066,6 @@ export default {
         clearTimeout(timeout);
         timeout = setTimeout(() => fn.apply(this, args), delay);
       };
-    },
-    
-    // Add selected project from project selection dialog
-    addSelectedProject() {
-      if (!this.selectedProjectId || this.availableProjects.length === 0) return;
-      
-      const selectedProject = this.availableProjects.find(p => p.id === this.selectedProjectId);
-      if (selectedProject) {
-        this.addProjectToTimesheet(selectedProject);
-      }
-      
-      this.projectSelectionDialog = false;
     },
     
     // Add method to validate and save all entries at once
