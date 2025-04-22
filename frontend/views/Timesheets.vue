@@ -7,7 +7,7 @@
         {{ dateRangeText }}
         <v-icon class="ml-2">mdi-calendar</v-icon>
       </div>
-      <v-menu offset-y>
+      <v-menu offset-y ref="projectMenu">
         <template #activator="{ on, attrs }">
           <v-btn
             color="primary"
@@ -346,6 +346,51 @@
       </v-card>
     </v-dialog>
 
+    <!-- Add Project Selection Dialog (fallback) -->
+    <v-dialog v-model="projectSelectionDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Add Project to Timesheet</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <v-row v-if="availableProjects.length > 0">
+              <v-col cols="12">
+                <v-select
+                  v-model="selectedProjectId"
+                  :items="availableProjects"
+                  item-text="name"
+                  item-value="id"
+                  label="Select Project"
+                  :rules="[v => !!v || 'Project is required']"
+                  required
+                ></v-select>
+              </v-col>
+            </v-row>
+            <v-row v-else>
+              <v-col cols="12">
+                <p class="text-center">No available projects to add.</p>
+              </v-col>
+            </v-row>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="projectSelectionDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn 
+            color="blue darken-1" 
+            text 
+            @click="addSelectedProject"
+            :disabled="!selectedProjectId || availableProjects.length === 0"
+          >
+            Add
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar
       v-model="snackbar.show"
       :color="snackbar.color"
@@ -433,7 +478,11 @@ export default {
         'project-manager': 3,
         'director': 4,
         'executive': 5
-      }
+      },
+      
+      // Add Project Selection Dialog (fallback)
+      projectSelectionDialog: false,
+      selectedProjectId: null
     };
   },
   
@@ -841,14 +890,46 @@ export default {
         this.timeEntries[project.id] = {};
       }
       
+      // Initialize all days for this project
+      this.daysInPeriod.forEach(day => {
+        if (!this.timeEntries[project.id][day.date]) {
+          this.timeEntries[project.id][day.date] = { hours: '', comment: '' };
+        }
+      });
+      
       this.isDirty = true;
       this.saved = false;
+      
+      // Show feedback to user
+      this.showSnackbar(`Added ${project.name} to timesheet`, 'success');
+      
+      // Reset selected project
+      this.selectedProjectId = null;
     },
     
     // Show the add project menu
     showAddProjectMenu() {
-      // This would trigger the menu to open
-      // Implementation depends on how you want to handle this UI interaction
+      // Open the dropdown menu programmatically
+      const addProjectButton = document.querySelector(".v-menu");
+      if (addProjectButton) {
+        // Get the v-menu component and open it
+        const menu = this.$refs.projectMenu;
+        if (menu) {
+          menu.isActive = true;
+        } else {
+          // Alternative approach - click the button to open the menu
+          document.querySelector('.v-menu button').click();
+        }
+      } else {
+        // If we can't find the menu component, show available projects in a dialog
+        this.showProjectSelectionDialog();
+      }
+    },
+    
+    // Show a dialog to select projects (as a fallback)
+    showProjectSelectionDialog() {
+      // Create a dialog for project selection if dropdown isn't working
+      this.$set(this, 'projectSelectionDialog', true);
     },
     
     // Calculate total hours for a project
@@ -940,34 +1021,52 @@ export default {
     
     // Validate and save an entry
     validateAndSave(projectId, date) {
-      // Ensure the entry exists
-      if (!this.timeEntries[projectId][date]) {
-        this.timeEntries[projectId][date] = { hours: '0', comment: '' };
+      try {
+        // Ensure the entry exists
+        if (!this.timeEntries[projectId]) {
+          this.timeEntries[projectId] = {};
+        }
+        
+        if (!this.timeEntries[projectId][date]) {
+          this.timeEntries[projectId][date] = { hours: '', comment: '' };
+        }
+        
+        const hours = this.timeEntries[projectId][date].hours;
+        
+        // If the field is empty, just leave it empty (don't convert to 0)
+        if (hours === '') {
+          return;
+        }
+        
+        // Basic validation
+        const numericHours = parseFloat(hours);
+        if (isNaN(numericHours) || numericHours < 0) {
+          // Invalid entry - reset to empty
+          this.timeEntries[projectId][date].hours = '';
+          this.showSnackbar('Invalid time entry. Please enter a positive number.', 'error');
+          return;
+        } else if (numericHours > 24) {
+          // Cap at 24 hours
+          this.timeEntries[projectId][date].hours = '24';
+          this.showSnackbar('Maximum daily hours is 24. Value has been adjusted.', 'warning');
+        } else {
+          // Format to fixed decimal (0.25 increments)
+          const roundedHours = Math.round(numericHours * 4) / 4;
+          this.timeEntries[projectId][date].hours = roundedHours.toString();
+        }
+        
+        // If hours are greater than 0, prompt for a comment if none exists
+        if (numericHours > 0 && !this.timeEntries[projectId][date].comment) {
+          this.openCommentDialog(projectId, date);
+        }
+        
+        // Mark as need saving
+        this.isDirty = true;
+        this.saved = false;
+      } catch (error) {
+        console.error('Error in validateAndSave:', error);
+        this.showSnackbar('An error occurred while saving your time entry.', 'error');
       }
-      
-      const hours = this.timeEntries[projectId][date].hours;
-      
-      // Basic validation
-      if (hours && (isNaN(parseFloat(hours)) || parseFloat(hours) < 0)) {
-        this.timeEntries[projectId][date].hours = '0';
-      } else if (hours && parseFloat(hours) > 24) {
-        this.timeEntries[projectId][date].hours = '24';
-      }
-      
-      // If hours are greater than 0, prompt for a comment if none exists
-      if (parseFloat(this.timeEntries[projectId][date].hours) > 0 && 
-          !this.timeEntries[projectId][date].comment) {
-        this.openCommentDialog(projectId, date);
-      }
-      
-      // If hours are 0, remove the entry
-      if (parseFloat(this.timeEntries[projectId][date].hours) === 0) {
-        this.$delete(this.timeEntries[projectId], date);
-      }
-      
-      // Mark as need saving
-      this.isDirty = true;
-      this.saved = false;
     },
     
     // Track focus for better user experience
@@ -1057,6 +1156,18 @@ export default {
         clearTimeout(timeout);
         timeout = setTimeout(() => fn.apply(this, args), delay);
       };
+    },
+    
+    // Add selected project from project selection dialog
+    addSelectedProject() {
+      if (!this.selectedProjectId || this.availableProjects.length === 0) return;
+      
+      const selectedProject = this.availableProjects.find(p => p.id === this.selectedProjectId);
+      if (selectedProject) {
+        this.addProjectToTimesheet(selectedProject);
+      }
+      
+      this.projectSelectionDialog = false;
     }
   }
 };
