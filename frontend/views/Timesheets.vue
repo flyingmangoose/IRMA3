@@ -522,12 +522,9 @@ export default {
     
     // Determine if user can submit timesheet
     canSubmitTimesheet() {
-      // Can submit if:
-      // 1. It's their own timesheet
-      // 2. Status is Draft or Rejected
-      // 3. There are entries with hours > 0
+      // Simplified validation: just check if there are any hours logged
       const hasEntries = this.calculateTotalHours() > 0;
-      return (this.timesheetStatus === 'Draft' || this.timesheetStatus === 'Rejected') && hasEntries;
+      return hasEntries;
     },
     
     // Determine if user can approve timesheet
@@ -672,7 +669,13 @@ export default {
     
     // Submit timesheet for approval
     submitTimesheet() {
-      // Validate that all entries have comments
+      // Set to loading state
+      this.loading = true;
+      
+      // Save any unsaved entries first
+      this.validateAndSaveAll();
+      
+      // More lenient validation - check for missing comments but don't block submission
       let missingComments = false;
       
       Object.keys(this.timeEntries).forEach(projectId => {
@@ -685,33 +688,21 @@ export default {
       });
       
       if (missingComments) {
-        this.submitError = 'All time entries must have comments. Please complete all entries.';
-        return;
+        // Show warning but allow continuation
+        this.showSnackbar('Some entries are missing comments. Consider adding them for better tracking.', 'warning');
       }
       
-      // Submit for approval
-      this.timesheetStatus = 'Submitted';
-      this.submitDialog = false;
-      
-      // Find an appropriate approver based on hierarchy
-      this.determineApprover();
-      
-      this.showSnackbar('Timesheet submitted for approval', 'success');
-      
-      // In a real app, this would call the API
-      /*
-      axios.post(`/api/timesheets/${this.timesheetId}/submit`)
-        .then(response => {
-          this.timesheetStatus = 'Submitted';
-          this.approver = response.data.approver;
-          this.submitDialog = false;
-          this.showSnackbar('Timesheet submitted for approval', 'success');
-        })
-        .catch(error => {
-          console.error('Error submitting timesheet:', error);
-          this.submitError = error.response?.data?.message || 'Error submitting timesheet';
-        });
-      */
+      // Update timesheet status
+      setTimeout(() => {
+        this.timesheetStatus = 'Submitted';
+        this.submitDialog = false;
+        this.loading = false;
+        
+        // Show success message
+        this.showSnackbar('Timesheet submitted successfully', 'success');
+        
+        // In real app, this would be an API call instead of setTimeout
+      }, 500);
     },
     
     // Determine who should approve this timesheet based on hierarchy
@@ -1111,6 +1102,31 @@ export default {
         // Save timesheet
         this.saveTimesheet();
         this.showSnackbar('Timesheet saved successfully', 'success');
+      }
+    },
+    
+    // Add this simplified method to validate and save hours
+    validateHours(projectId, date) {
+      try {
+        if (!this.timeEntries[projectId] || !this.timeEntries[projectId][date]) return;
+        
+        const hours = this.timeEntries[projectId][date].hours;
+        
+        // Skip empty fields
+        if (hours === '') return;
+        
+        // Validate and format hours
+        const numericHours = parseFloat(hours);
+        if (!isNaN(numericHours) && numericHours >= 0) {
+          // Round to 0.25 increments
+          const roundedHours = Math.round(numericHours * 4) / 4;
+          this.timeEntries[projectId][date].hours = roundedHours.toString();
+        } else {
+          // Reset invalid entries
+          this.timeEntries[projectId][date].hours = '';
+        }
+      } catch (error) {
+        console.error('Error validating hours:', error);
       }
     }
   }
