@@ -30,16 +30,20 @@ const connectDB = async () => {
   }
 };
 
-// Routes (to be implemented)
+// Routes
 app.get('/api', (req, res) => {
   res.json({ message: 'Welcome to IRMA API' });
 });
 
-// API routes will be added here
-// app.use('/api/users', require('./routes/users'));
-// app.use('/api/clients', require('./routes/clients'));
-// app.use('/api/projects', require('./routes/projects'));
-// app.use('/api/timesheets', require('./routes/timesheets'));
+// API routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/clients', require('./routes/clients'));
+app.use('/api/projects', require('./routes/projects'));
+app.use('/api/timesheets', require('./routes/timesheets'));
+app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/reports', require('./routes/reports'));
+app.use('/api/approvals', require('./routes/approvals'));
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
