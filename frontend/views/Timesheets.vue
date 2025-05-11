@@ -17,6 +17,89 @@
       </v-btn>
     </div>
 
+    <!-- Testing Approval Panel -->
+    <v-expansion-panels class="mb-4">
+      <v-expansion-panel>
+        <v-expansion-panel-header>
+          <div class="d-flex align-center">
+            <v-icon left color="primary">mdi-test-tube</v-icon>
+            Approval Workflow Testing
+          </div>
+        </v-expansion-panel-header>
+        <v-expansion-panel-content>
+          <v-card flat>
+            <v-card-text>
+              <p class="mb-2">Use this panel to test the timesheet approval workflow.</p>
+              
+              <v-row>
+                <v-col cols="12" md="4">
+                  <v-select
+                    v-model="testUserRole"
+                    :items="userRoles"
+                    label="Switch User Role"
+                    @change="updateUserRole"
+                  ></v-select>
+                </v-col>
+                
+                <v-col cols="12" md="8">
+                  <v-btn-toggle v-model="timesheetStatus" mandatory class="mb-2">
+                    <v-btn value="Draft" small>Draft</v-btn>
+                    <v-btn value="Submitted" small>Submitted</v-btn>
+                    <v-btn value="Approved" small>Approved</v-btn>
+                    <v-btn value="Rejected" small>Rejected</v-btn>
+                  </v-btn-toggle>
+                  
+                  <div class="d-flex mt-2">
+                    <v-btn 
+                      color="success" 
+                      small 
+                      :disabled="!canApproveTimesheet || timesheetStatus !== 'Submitted'"
+                      @click="showApprovalDialog"
+                      class="mr-2"
+                    >
+                      <v-icon left small>mdi-check</v-icon>
+                      Approve
+                    </v-btn>
+                    
+                    <v-btn 
+                      color="error" 
+                      small 
+                      :disabled="!canApproveTimesheet || timesheetStatus !== 'Submitted'"
+                      @click="showRejectionDialog"
+                      class="mr-2"
+                    >
+                      <v-icon left small>mdi-close</v-icon>
+                      Reject
+                    </v-btn>
+                    
+                    <v-btn 
+                      color="warning" 
+                      small 
+                      v-if="timesheetStatus === 'Approved'"
+                      @click="reopenTimesheet"
+                    >
+                      <v-icon left small>mdi-undo</v-icon>
+                      Reopen
+                    </v-btn>
+                  </div>
+                </v-col>
+              </v-row>
+              
+              <v-alert
+                v-if="timesheetStatus === 'Rejected'" 
+                type="error" 
+                outlined 
+                dense
+                class="mt-4"
+              >
+                <strong>Rejection Reason:</strong> {{ rejectionReason || "The timesheet was rejected due to missing information." }}
+              </v-alert>
+            </v-card-text>
+          </v-card>
+        </v-expansion-panel-content>
+      </v-expansion-panel>
+    </v-expansion-panels>
+
     <div class="mb-4">
       <v-chip
         color="success"
@@ -84,7 +167,30 @@
                     hide-details
                     single-line
                     class="hour-input"
-                  ></v-text-field>
+                    :disabled="timesheetStatus === 'Approved' || timesheetStatus === 'Submitted'"
+                    @blur="validateHours(project.id, day.date)"
+                  >
+                    <template v-slot:append>
+                      <div class="hour-controls">
+                        <v-btn
+                          x-small
+                          icon
+                          @click="incrementHours(project.id, day.date, -0.25)"
+                          :disabled="timesheetStatus === 'Approved' || timesheetStatus === 'Submitted'"
+                        >
+                          <v-icon x-small>mdi-minus</v-icon>
+                        </v-btn>
+                        <v-btn
+                          x-small
+                          icon
+                          @click="incrementHours(project.id, day.date, 0.25)"
+                          :disabled="timesheetStatus === 'Approved' || timesheetStatus === 'Submitted'"
+                        >
+                          <v-icon x-small>mdi-plus</v-icon>
+                        </v-btn>
+                      </div>
+                    </template>
+                  </v-text-field>
                   <v-btn
                     x-small
                     icon
@@ -92,6 +198,7 @@
                     @click="openCommentDialog(project.id, day.date)"
                     title="Add comment"
                     class="comment-btn"
+                    :disabled="timesheetStatus === 'Approved'"
                   >
                     <v-icon x-small>{{ timeEntries[project.id][day.date].comment ? 'mdi-comment-check' : 'mdi-comment-plus' }}</v-icon>
                   </v-btn>
@@ -341,30 +448,18 @@
         </v-card-title>
         <v-card-text>
           <v-container>
-            <p>You are rejecting this timesheet.</p>
-            <p>Employee: <strong>{{ timesheetOwner }}</strong></p>
-            <p>Period: <strong>{{ dateRangeText }}</strong></p>
-            
-            <v-textarea
-              v-model="rejectionComment"
-              label="Reason for Rejection"
-              placeholder="Please provide a reason for rejecting this timesheet"
-              auto-grow
-              rows="3"
-              counter="500"
-              class="mt-4"
-              :rules="[v => !!v || 'A reason for rejection is required']"
-            ></v-textarea>
-            
-            <v-alert
-              v-if="rejectionError"
-              type="error"
-              outlined
-              dense
-              class="mt-2"
-            >
-              {{ rejectionError }}
-            </v-alert>
+            <v-row>
+              <v-col cols="12">
+                <p>Please provide a reason for rejecting this timesheet.</p>
+                <v-textarea
+                  v-model="rejectionReason"
+                  outlined
+                  rows="3"
+                  placeholder="Provide feedback to help the user correct their timesheet"
+                  required
+                ></v-textarea>
+              </v-col>
+            </v-row>
           </v-container>
         </v-card-text>
         <v-card-actions>
@@ -372,7 +467,11 @@
           <v-btn color="grey darken-1" text @click="rejectionDialog = false">
             Cancel
           </v-btn>
-          <v-btn color="error" @click="rejectTimesheet">
+          <v-btn 
+            color="error" 
+            @click="rejectTimesheet"
+            :disabled="!rejectionReason"
+          >
             Reject Timesheet
           </v-btn>
         </v-card-actions>
@@ -456,21 +555,29 @@ export default {
       
       // Rejection dialog
       rejectionDialog: false,
-      rejectionComment: '',
-      rejectionError: '',
+      rejectionReason: '',
       
       // User roles and hierarchy for approvals
       userHierarchy: {
         'employee': 1,
-        'team-lead': 2,
-        'project-manager': 3,
+        'lead': 2,
+        'manager': 3,
         'director': 4,
-        'executive': 5
+        'admin': 5
       },
       
       // Add Project Selection Dialog
       projectSelectionDialog: false,
-      selectedProjectId: null
+      selectedProjectId: null,
+      
+      // Testing approval workflow
+      testUserRole: 'employee',
+      userRoles: [
+        { text: 'Employee', value: 'employee' },
+        { text: 'Project Manager', value: 'manager' },
+        { text: 'Director', value: 'director' },
+        { text: 'Administrator', value: 'admin' }
+      ]
     };
   },
   
@@ -741,66 +848,49 @@ export default {
     
     // Approve timesheet
     approveTimesheet() {
-      // Update status
-      this.timesheetStatus = 'Approved';
-      this.approvalDialog = false;
-      this.showSnackbar('Timesheet approved', 'success');
+      this.loading = true;
       
-      // In a real app, this would call the API
-      /*
-      axios.post(`/api/timesheets/${this.timesheetId}/approve`, {
-        comment: this.approvalComment
-      })
-        .then(() => {
-          this.timesheetStatus = 'Approved';
-          this.approvalDialog = false;
-          this.showSnackbar('Timesheet approved', 'success');
-        })
-        .catch(error => {
-          console.error('Error approving timesheet:', error);
-          this.showSnackbar(
-            error.response?.data?.message || 'Error approving timesheet', 
-            'error'
-          );
-        });
-      */
+      // In a real app this would call the API
+      setTimeout(() => {
+        this.timesheetStatus = 'Approved';
+        this.approvalDialog = false;
+        this.loading = false;
+        
+        this.showSnackbar('Timesheet has been approved', 'success');
+      }, 500);
     },
     
     // Show rejection dialog
     showRejectionDialog() {
-      this.rejectionComment = '';
-      this.rejectionError = '';
+      this.rejectionReason = '';
       this.rejectionDialog = true;
     },
     
     // Reject timesheet
     rejectTimesheet() {
-      // Validate rejection reason
-      if (!this.rejectionComment.trim()) {
-        this.rejectionError = 'Please provide a reason for rejection';
-        return;
-      }
+      this.loading = true;
       
-      // Update status
-      this.timesheetStatus = 'Rejected';
-      this.rejectionDialog = false;
-      this.showSnackbar('Timesheet rejected', 'error');
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        this.timesheetStatus = 'Rejected';
+        this.rejectionDialog = false;
+        this.loading = false;
+        
+        this.showSnackbar('Timesheet has been rejected', 'error');
+      }, 500);
+    },
+    
+    // Reopen an approved timesheet
+    reopenTimesheet() {
+      this.loading = true;
       
-      // In a real app, this would call the API
-      /*
-      axios.post(`/api/timesheets/${this.timesheetId}/reject`, {
-        comment: this.rejectionComment
-      })
-        .then(() => {
-          this.timesheetStatus = 'Rejected';
-          this.rejectionDialog = false;
-          this.showSnackbar('Timesheet rejected', 'error');
-        })
-        .catch(error => {
-          console.error('Error rejecting timesheet:', error);
-          this.rejectionError = error.response?.data?.message || 'Error rejecting timesheet';
-        });
-      */
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        this.timesheetStatus = 'Draft';
+        this.loading = false;
+        
+        this.showSnackbar('Timesheet has been reopened', 'info');
+      }, 500);
     },
     
     // Show snackbar notification
@@ -1128,6 +1218,36 @@ export default {
       } catch (error) {
         console.error('Error validating hours:', error);
       }
+    },
+    
+    // Update user role for testing
+    updateUserRole() {
+      if (this.currentUser) {
+        this.currentUser.role = this.testUserRole;
+      } else {
+        this.currentUser = { 
+          id: 'test-user', 
+          role: this.testUserRole,
+          firstName: 'Test',
+          lastName: 'User'
+        };
+      }
+      
+      console.log(`Role changed to: ${this.testUserRole}`);
+    },
+    
+    // Increment hours for a time entry
+    incrementHours(projectId, date, increment) {
+      if (!this.timeEntries[projectId] || !this.timeEntries[projectId][date]) return;
+      
+      const currentHours = parseFloat(this.timeEntries[projectId][date].hours);
+      const newHours = currentHours + increment;
+      
+      if (newHours >= 0 && newHours <= 24) {
+        this.timeEntries[projectId][date].hours = newHours.toString();
+        this.isDirty = true;
+        this.saved = false;
+      }
     }
   }
 };
@@ -1143,15 +1263,40 @@ export default {
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 120px; /* Increased from default */
 }
 
 .timesheet-table >>> .hour-input {
   text-align: center;
   width: calc(100% - 24px);
+  min-width: 80px; /* Added minimum width */
 }
 
 .timesheet-table >>> .v-text-field input {
   text-align: center;
+  font-size: 16px; /* Slightly larger text */
+}
+
+.timesheet-table >>> .hour-controls {
+  display: flex;
+  flex-direction: column;
+  margin-right: -8px;
+}
+
+.timesheet-table >>> .hour-controls .v-btn {
+  margin: 0;
+  height: 16px !important;
+  width: 16px !important;
+}
+
+.timesheet-table >>> .hour-controls .v-btn .v-icon {
+  font-size: 14px;
+}
+
+.timesheet-table >>> th {
+  min-width: 100px; /* Ensure column headers have enough width */
+  white-space: nowrap;
+  padding: 0 8px;
 }
 
 .timesheet-table >>> .weekend-cell {
@@ -1174,5 +1319,11 @@ export default {
 .comment-btn {
   margin-left: 4px;
   min-width: auto !important;
+}
+
+/* Added scroll for table on small screens */
+.timesheet-table {
+  overflow-x: auto;
+  display: block;
 }
 </style>
