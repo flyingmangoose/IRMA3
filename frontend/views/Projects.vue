@@ -845,6 +845,8 @@
 </template>
 
 <script>
+import { clientService } from '@/services';
+
 export default {
   name: 'ProjectsPage',
   data() {
@@ -1127,6 +1129,10 @@ export default {
     }
   },
   
+  created() {
+    this.fetchClients();
+  },
+  
   computed: {
     formTitle() {
       return this.editedIndex === -1 ? 'New Project' : 'Edit Project'
@@ -1134,6 +1140,17 @@ export default {
   },
   
   methods: {
+    // Fetch clients from API
+    async fetchClients() {
+      try {
+        const response = await clientService.getAllClients();
+        this.clients = response.data;
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+        // Keep mock clients as fallback
+      }
+    },
+    
     // Get appropriate color for status chip
     getStatusColor(status) {
       switch (status) {
@@ -1474,15 +1491,13 @@ export default {
     },
     
     // Save the new client
-    saveNewClient() {
+    async saveNewClient() {
       // Validate the form
       if (!this.$refs.clientForm || !this.$refs.clientForm.validate()) return;
       
       try {
-        // In a real app, you would call the API to save the new client
-        const newClientId = Math.random().toString(36).substring(2, 9);
-        const newClientObject = {
-          id: newClientId,
+        // Prepare client data
+        const clientData = {
           name: this.newClient.name.trim(),
           contactPerson: this.newClient.contactPerson.trim(),
           email: this.newClient.email.trim(),
@@ -1496,18 +1511,21 @@ export default {
           },
           totalBudget: this.newClient.totalBudget || 0,
           isActive: this.newClient.isActive,
-          notes: this.newClient.notes ? this.newClient.notes.trim() : '',
-          createdAt: new Date().toISOString()
+          notes: this.newClient.notes ? this.newClient.notes.trim() : ''
         };
         
+        // Call API to create client
+        const response = await clientService.createClient(clientData);
+        const newClient = response.data;
+        
         // Add to clients array
-        this.clients.push(newClientObject);
+        this.clients.push(newClient);
         
         // Select the new client in the project form
-        this.editedItem.clientId = newClientId;
+        this.editedItem.clientId = newClient.id;
         
         // Show success message
-        this.snackbar.text = `New client "${newClientObject.name}" created successfully!`;
+        this.snackbar.text = `New client "${newClient.name}" created successfully!`;
         this.snackbar.color = 'success';
         this.snackbar.show = true;
         
@@ -1531,9 +1549,9 @@ export default {
         
         this.closeNewClientDialog();
       } catch (error) {
-        // Handle any errors
+        // Handle API errors
         console.error('Error creating client:', error);
-        this.snackbar.text = 'Error creating client. Please try again.';
+        this.snackbar.text = error.response?.data?.msg || 'Error creating client. Please try again.';
         this.snackbar.color = 'error';
         this.snackbar.show = true;
       }
