@@ -185,6 +185,188 @@
       </v-data-table>
     </v-card>
 
+    <!-- Resources Report Card -->
+    <v-card class="mb-4">
+      <v-card-title>
+        Resource Reports
+        <v-spacer></v-spacer>
+        <v-btn-toggle v-model="reportView" mandatory class="ml-2">
+          <v-btn value="table">
+            <v-icon>mdi-table</v-icon>
+          </v-btn>
+          <v-btn value="chart">
+            <v-icon>mdi-chart-bar</v-icon>
+          </v-btn>
+        </v-btn-toggle>
+      </v-card-title>
+
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" sm="3">
+            <v-select
+              v-model="reportTimeframe"
+              :items="timeframeOptions"
+              label="Timeframe"
+              outlined
+              dense
+              @change="generateResourceReport"
+            ></v-select>
+          </v-col>
+          
+          <v-col cols="12" sm="3">
+            <v-select
+              v-model="reportType"
+              :items="reportTypeOptions"
+              label="Report Type"
+              outlined
+              dense
+              @change="generateResourceReport"
+            ></v-select>
+          </v-col>
+          
+          <v-col cols="12" sm="3">
+            <v-autocomplete
+              v-model="selectedResource"
+              :items="resources"
+              item-text="fullName"
+              item-value="id"
+              label="Search by Resource"
+              outlined
+              dense
+              clearable
+              @change="generateResourceReport"
+            ></v-autocomplete>
+          </v-col>
+          
+          <v-col cols="12" sm="3">
+            <v-menu
+              ref="dateMenu"
+              v-model="dateMenu"
+              :close-on-content-click="false"
+              transition="scale-transition"
+              offset-y
+              min-width="auto"
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <v-text-field
+                  v-model="dateRangeText"
+                  label="Custom Date Range"
+                  prepend-icon="mdi-calendar"
+                  readonly
+                  outlined
+                  dense
+                  v-bind="attrs"
+                  v-on="on"
+                ></v-text-field>
+              </template>
+              <v-date-picker
+                v-model="dates"
+                range
+                no-title
+                @change="dateMenu = false"
+                @input="generateResourceReport"
+              ></v-date-picker>
+            </v-menu>
+          </v-col>
+        </v-row>
+        
+        <!-- Report loading indicator -->
+        <div v-if="reportLoading" class="text-center my-4">
+          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+          <div class="mt-2">Loading report data...</div>
+        </div>
+        
+        <!-- Table View -->
+        <div v-else-if="reportView === 'table' && !reportLoading">
+          <v-data-table
+            :headers="reportHeaders"
+            :items="reportData"
+            :items-per-page="10"
+            class="elevation-1 mt-4"
+            v-if="reportData.length > 0"
+          >
+            <!-- Utilization column -->
+            <template v-slot:[`item.utilization`]="{ item }">
+              <v-progress-linear
+                :value="item.utilization"
+                height="15"
+                :color="getUtilizationColor(item.utilization)"
+              >
+                <template v-slot:default>
+                  <span class="white--text">{{ item.utilization }}%</span>
+                </template>
+              </v-progress-linear>
+            </template>
+            
+            <!-- Availability column -->
+            <template v-slot:[`item.availableHours`]="{ item }">
+              <v-progress-linear
+                :value="(item.availableHours / 40) * 100"
+                height="15"
+                color="success"
+              >
+                <template v-slot:default>
+                  <span class="white--text">{{ item.availableHours }} hrs</span>
+                </template>
+              </v-progress-linear>
+            </template>
+          </v-data-table>
+          
+          <div v-else class="text-center pa-4">
+            <v-icon large color="grey lighten-1">mdi-alert-circle-outline</v-icon>
+            <div class="mt-2">No data available for the selected filters.</div>
+            <v-btn text color="primary" class="mt-2" @click="resetReportFilters">
+              Reset Filters
+            </v-btn>
+          </div>
+        </div>
+        
+        <!-- Chart View -->
+        <div v-else-if="reportView === 'chart' && !reportLoading" class="mt-4">
+          <div v-if="reportData.length > 0">
+            <div class="d-flex mb-4 justify-center">
+              <v-chip-group v-model="chartMetric" mandatory>
+                <v-chip value="utilization">Utilization %</v-chip>
+                <v-chip value="billableHours">Billable Hours</v-chip>
+                <v-chip value="availableHours">Available Hours</v-chip>
+              </v-chip-group>
+            </div>
+            
+            <!-- Simple bar chart for monthly view -->
+            <div class="simple-chart-container">
+              <div v-for="(item, index) in chartData" :key="index" class="month-column">
+                <div 
+                  class="month-bar" 
+                  :style="{ 
+                    height: `${getBarHeight(item[chartMetric])}px`, 
+                    backgroundColor: getBarColor(item[chartMetric], chartMetric) 
+                  }"
+                >
+                  <div class="month-value">{{ formatChartValue(item[chartMetric], chartMetric) }}</div>
+                </div>
+                <div class="month-label">{{ item.period }}</div>
+              </div>
+            </div>
+            
+            <!-- Chart Legend -->
+            <div class="d-flex justify-center mt-4">
+              <v-chip :color="getBarColor(30, chartMetric)" small class="mr-2">Low</v-chip>
+              <v-chip :color="getBarColor(60, chartMetric)" small class="mr-2">Medium</v-chip>
+              <v-chip :color="getBarColor(90, chartMetric)" small>High</v-chip>
+            </div>
+          </div>
+          
+          <div v-else class="text-center pa-4">
+            <v-icon large color="grey lighten-1">mdi-chart-bar</v-icon>
+            <div class="mt-2">No chart data available for the selected filters.</div>
+            <v-btn text color="primary" class="mt-2" @click="resetReportFilters">
+              Reset Filters
+            </v-btn>
+          </div>
+        </div>
+      </v-card-text>
+    </v-card>
+
     <!-- New/Edit Resource Dialog -->
     <v-dialog v-model="dialogResource" max-width="600px">
       <v-card>
@@ -816,6 +998,7 @@
 
 <script>
 import axios from 'axios';
+import moment from 'moment';
 
 export default {
   name: 'ResourcesPage',
@@ -922,6 +1105,37 @@ export default {
         'JavaScript', 'React', 'Vue', 'Angular', 'Node.js', 'Python', 'Java', 'C#',
         'UI/UX Design', 'Product Design', 'Database Design', 'SQL', 'MongoDB', 
         'Project Management', 'Agile', 'Scrum', 'DevOps', 'AWS', 'Azure', 'GCP'
+      ],
+      reportView: 'table',
+      reportTimeframe: 'ytd',
+      reportType: 'all',
+      timeframeOptions: [
+        { text: 'Year to Date', value: 'ytd' },
+        { text: 'Last 6 Months', value: 'last6' },
+        { text: 'Last 12 Months', value: 'last12' },
+        { text: 'Custom Range', value: 'custom' }
+      ],
+      reportTypeOptions: [
+        { text: 'All Resources', value: 'all' },
+        { text: 'By Department', value: 'department' },
+        { text: 'By Role', value: 'role' }
+      ],
+      selectedResource: null,
+      dates: [],
+      dateMenu: false,
+      reportLoading: false,
+      reportData: [],
+      chartData: [],
+      chartMetric: 'utilization',
+      reportHeaders: [
+        { text: 'Period', value: 'period', sortable: true },
+        { text: 'Resource', value: 'resourceName', sortable: true },
+        { text: 'Department', value: 'department', sortable: true },
+        { text: 'Role', value: 'role', sortable: true },
+        { text: 'Utilization %', value: 'utilization', sortable: true },
+        { text: 'Billable Hours', value: 'billableHours', sortable: true },
+        { text: 'Available Hours', value: 'availableHours', sortable: true },
+        { text: 'Projects', value: 'projectCount', sortable: true }
       ]
     };
   },
@@ -988,6 +1202,11 @@ export default {
         
         return true;
       });
+    },
+    
+    dateRangeText() {
+      if (!this.dates || this.dates.length !== 2) return 'Select date range';
+      return `${this.formatShortDate(this.dates[0])} - ${this.formatShortDate(this.dates[1])}`;
     }
   },
 
@@ -999,6 +1218,8 @@ export default {
 
   created() {
     this.fetchResources();
+    this.initializeReportDates();
+    this.generateResourceReport();
   },
 
   methods: {
@@ -1578,6 +1799,237 @@ export default {
         const availableHours = this.getAvailableHours(resource);
         return availableHours >= minHours;
       });
+    },
+
+    initializeReportDates() {
+      const today = new Date();
+      const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+      this.dates = [
+        firstDayOfYear.toISOString().substr(0, 10),
+        today.toISOString().substr(0, 10)
+      ];
+    },
+    
+    formatShortDate(dateString) {
+      return moment(dateString).format('MMM DD, YYYY');
+    },
+    
+    resetReportFilters() {
+      this.reportTimeframe = 'ytd';
+      this.reportType = 'all';
+      this.selectedResource = null;
+      this.initializeReportDates();
+      this.generateResourceReport();
+    },
+    
+    generateResourceReport() {
+      this.reportLoading = true;
+      
+      // Set date range based on selected timeframe
+      if (this.reportTimeframe !== 'custom') {
+        const today = new Date();
+        let startDate;
+        
+        switch (this.reportTimeframe) {
+          case 'ytd':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            break;
+          case 'last6':
+            startDate = new Date(today);
+            startDate.setMonth(today.getMonth() - 6);
+            break;
+          case 'last12':
+            startDate = new Date(today);
+            startDate.setMonth(today.getMonth() - 12);
+            break;
+          default:
+            startDate = new Date(today.getFullYear(), 0, 1);
+        }
+        
+        this.dates = [
+          startDate.toISOString().substr(0, 10),
+          today.toISOString().substr(0, 10)
+        ];
+      }
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        // Generate mock data
+        this.generateMockReportData();
+        this.reportLoading = false;
+      }, 800);
+    },
+    
+    generateMockReportData() {
+      const months = [];
+      const startDate = moment(this.dates[0]);
+      const endDate = moment(this.dates[1]);
+      let currentDate = moment(startDate);
+      
+      // Create array of months between start and end dates
+      while (currentDate.isSameOrBefore(endDate, 'month')) {
+        months.push(currentDate.format('YYYY-MM'));
+        currentDate.add(1, 'month');
+      }
+      
+      // Filter resources if a specific one is selected
+      const filteredResources = this.selectedResource ? 
+        this.resources.filter(r => r.id === this.selectedResource) : 
+        this.resources;
+      
+      // Generate report data based on months and resources
+      this.reportData = [];
+      this.chartData = [];
+      
+      // Group data by month or resource based on report type
+      if (this.reportType === 'all' && this.selectedResource) {
+        // Generate monthly data for a single resource
+        months.forEach(month => {
+          const resource = filteredResources[0];
+          const monthData = this.generateResourceMonthData(resource, month);
+          this.reportData.push(monthData);
+          this.chartData.push(monthData);
+        });
+      } else if (this.reportType === 'all') {
+        // Generate aggregated monthly data for all resources
+        months.forEach(month => {
+          const monthYear = moment(month).format('MMM YYYY');
+          const utilization = Math.floor(Math.random() * 35) + 45; // 45-80%
+          const billableHours = Math.floor(Math.random() * 500) + 1500; // 1500-2000
+          const availableHours = Math.floor(Math.random() * 300) + 700; // 700-1000
+          
+          const monthData = {
+            period: monthYear,
+            resourceName: 'All Resources',
+            department: 'All Departments',
+            role: 'All Roles',
+            utilization: utilization,
+            billableHours: billableHours,
+            availableHours: availableHours,
+            projectCount: Math.floor(Math.random() * 10) + 10 // 10-20
+          };
+          
+          this.reportData.push(monthData);
+          this.chartData.push(monthData);
+        });
+        
+        // Add detailed data for each resource in the latest month
+        const latestMonth = months[months.length - 1];
+        filteredResources.forEach(resource => {
+          const resourceData = this.generateResourceMonthData(resource, latestMonth);
+          this.reportData.push(resourceData);
+        });
+      } else if (this.reportType === 'department' || this.reportType === 'role') {
+        // Group by department or role
+        const groupField = this.reportType === 'department' ? 'department' : 'role';
+        const groupMap = {};
+        
+        // First, group resources by department/role
+        filteredResources.forEach(resource => {
+          const groupValue = resource[groupField];
+          if (!groupMap[groupValue]) {
+            groupMap[groupValue] = [];
+          }
+          groupMap[groupValue].push(resource);
+        });
+        
+        // Generate aggregated data for each group and month
+        Object.keys(groupMap).forEach(groupValue => {
+          const groupResources = groupMap[groupValue];
+          
+          months.forEach(month => {
+            const monthYear = moment(month).format('MMM YYYY');
+            const utilization = Math.floor(Math.random() * 35) + 45; // 45-80%
+            const billableHours = Math.floor(Math.random() * 200) + 300; // 300-500
+            const availableHours = Math.floor(Math.random() * 100) + 150; // 150-250
+            
+            const groupData = {
+              period: monthYear,
+              resourceName: `${groupValue} (${groupResources.length} resources)`,
+              department: this.reportType === 'department' ? groupValue : 'Multiple',
+              role: this.reportType === 'role' ? groupValue : 'Multiple',
+              utilization: utilization,
+              billableHours: billableHours,
+              availableHours: availableHours,
+              projectCount: Math.floor(Math.random() * 5) + 3 // 3-8
+            };
+            
+            this.reportData.push(groupData);
+            if (months.indexOf(month) === months.length - 1) {
+              this.chartData.push(groupData);
+            }
+          });
+        });
+        
+        // Create chart data - one bar per group
+        if (this.reportType === 'department') {
+          this.chartData = Object.keys(groupMap).map(dept => {
+            return {
+              period: dept,
+              utilization: Math.floor(Math.random() * 35) + 45,
+              billableHours: Math.floor(Math.random() * 500) + 500,
+              availableHours: Math.floor(Math.random() * 300) + 300
+            };
+          });
+        }
+      }
+    },
+    
+    generateResourceMonthData(resource, month) {
+      const monthYear = moment(month).format('MMM YYYY');
+      const utilization = Math.floor(Math.random() * 40) + 40; // 40-80%
+      const billableHours = Math.floor(Math.random() * 50) + 100; // 100-150
+      const availableHours = Math.floor(Math.random() * 20) + 20; // 20-40
+      
+      return {
+        period: monthYear,
+        resourceName: resource.fullName || `${resource.firstName} ${resource.lastName}`,
+        department: resource.department,
+        role: resource.role,
+        utilization: utilization,
+        billableHours: billableHours,
+        availableHours: availableHours,
+        projectCount: Math.floor(Math.random() * 3) + 1 // 1-3
+      };
+    },
+    
+    formatChartValue(value, metric) {
+      if (metric === 'utilization') {
+        return `${value}%`;
+      } else {
+        return `${value}h`;
+      }
+    },
+    
+    getBarHeight(value) {
+      let maxValue;
+      
+      if (this.chartMetric === 'utilization') {
+        maxValue = 100;
+        return (value / maxValue) * 200;
+      } else if (this.chartMetric === 'billableHours') {
+        maxValue = 2000;
+        return (value / maxValue) * 200;
+      } else {
+        maxValue = 1000;
+        return (value / maxValue) * 200;
+      }
+    },
+    
+    getBarColor(value, metric) {
+      if (metric === 'utilization') {
+        if (value < 40) return '#E57373';
+        if (value < 70) return '#FFB74D';
+        return '#81C784';
+      } else if (metric === 'billableHours') {
+        if (value < 500) return '#E57373'; 
+        if (value < 1000) return '#FFB74D';
+        return '#81C784';
+      } else {
+        if (value < 200) return '#81C784';
+        if (value < 500) return '#FFB74D';
+        return '#E57373';
+      }
     }
   }
 };
@@ -1676,5 +2128,47 @@ export default {
   font-size: 14px;
   color: #666;
   padding-top: 0;
+}
+
+.simple-chart-container {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  height: 250px;
+  margin: 20px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.month-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 50px;
+}
+
+.month-bar {
+  width: 30px;
+  border-radius: 3px 3px 0 0;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  transition: height 0.5s ease;
+}
+
+.month-value {
+  position: absolute;
+  top: -25px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.month-label {
+  margin-top: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+  transform: rotate(-45deg);
+  text-align: left;
+  width: 70px;
+  height: 30px;
 }
 </style>
