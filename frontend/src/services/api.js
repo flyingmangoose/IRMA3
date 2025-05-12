@@ -1,8 +1,14 @@
 import axios from 'axios';
 
+// Determine the API base URL
+const apiBaseUrl = process.env.VUE_APP_API_URL || '/api';
+
+// Log the API URL for debugging
+console.log('API Base URL:', apiBaseUrl);
+
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: process.env.VUE_APP_API_URL || '/api',
+  baseURL: apiBaseUrl,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
@@ -16,6 +22,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Log API requests in development
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('API Request:', config.method.toUpperCase(), config.url, config.data || config.params);
+    }
+    
     return config;
   },
   error => {
@@ -35,6 +47,10 @@ api.interceptors.response.use(
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
+    
+    // Log API errors
+    console.error('API Error:', error.response?.status, error.response?.data || error.message);
+    
     return Promise.reject(error);
   }
 );

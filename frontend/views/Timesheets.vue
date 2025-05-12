@@ -992,20 +992,41 @@ export default {
       // Set to loading state
       this.loading = true;
       
-      // Save any unsaved entries first
-      this.validateAndSaveAll();
+      // First make sure all entries are saved before submission
+      const hasChanges = this.isDirty;
       
-      // More lenient validation - check for missing comments but don't block submission
+      // Validate entries 
+      let hasErrors = false;
       let missingComments = false;
       
+      // Check all entries
       Object.keys(this.timeEntries).forEach(projectId => {
         Object.keys(this.timeEntries[projectId]).forEach(date => {
           const entry = this.timeEntries[projectId][date];
-          if (parseFloat(entry.hours) > 0 && !entry.comment) {
+          
+          // Skip empty entries
+          if (!entry.hours || entry.hours === '') return;
+          
+          const numericHours = parseFloat(entry.hours);
+          
+          // Validate hours
+          if (isNaN(numericHours) || numericHours < 0) {
+            hasErrors = true;
+            return;
+          }
+          
+          // Check for comments
+          if (numericHours > 0 && !entry.comment) {
             missingComments = true;
           }
         });
       });
+      
+      if (hasErrors) {
+        this.showSnackbar('Some entries have invalid hours. Please check your timesheet.', 'error');
+        this.loading = false;
+        return;
+      }
       
       if (missingComments) {
         // Show warning but allow continuation
@@ -1016,39 +1037,93 @@ export default {
       if (!this.timesheetId) {
         this.saveTimesheet();
         this.loading = false;
-        this.showSnackbar('Please save the timesheet first before submitting', 'error');
+        this.showSnackbar('Please save the timesheet first before submitting. Try again after saving.', 'info');
         this.submitDialog = false;
         return;
       }
       
-      // Use mock data for demo or real API in production
-      if (process.env.NODE_ENV === 'production' && this.timesheetId && !this.timesheetId.toString().startsWith('mock')) {
-        // Real implementation using the API service
-        timesheetService.submitTimesheet(this.timesheetId)
-          .then(response => {
-            if (response && response.data) {
-              this.timesheetData = response.data;
-              this.timesheetStatus = 'Submitted';
-            } else {
-              this.timesheetStatus = 'Submitted';
-            }
+      // Function to submit after ensuring everything is saved
+      const proceedWithSubmission = () => {
+        // Use mock data for demo or real API in production
+        if (process.env.NODE_ENV === 'production' && this.timesheetId && !this.timesheetId.toString().startsWith('mock')) {
+          // Real implementation using the API service
+          timesheetService.submitTimesheet(this.timesheetId)
+            .then(response => {
+              if (response && response.data) {
+                this.timesheetData = response.data;
+                this.timesheetStatus = 'Submitted';
+              } else {
+                this.timesheetStatus = 'Submitted';
+              }
+              this.submitDialog = false;
+              this.loading = false;
+              this.showSnackbar('Timesheet submitted successfully', 'success');
+            })
+            .catch(error => {
+              console.error('Error submitting timesheet:', error);
+              this.loading = false;
+              this.showSnackbar('Error submitting timesheet. Please try again.', 'error');
+            });
+        } else {
+          // Mock implementation for demo
+          setTimeout(() => {
+            this.timesheetStatus = 'Submitted';
             this.submitDialog = false;
             this.loading = false;
-            this.showSnackbar('Timesheet submitted successfully', 'success');
-          })
-          .catch(error => {
-            console.error('Error submitting timesheet:', error);
-            this.loading = false;
-            this.showSnackbar('Error submitting timesheet. Please try again.', 'error');
+            this.showSnackbar('Timesheet submitted successfully (mock)', 'success');
+          }, 500);
+        }
+      };
+      
+      // If there are unsaved changes, save them first then submit
+      if (hasChanges) {
+        // Prepare data for API
+        const entries = [];
+        
+        Object.keys(this.timeEntries).forEach(projectId => {
+          Object.keys(this.timeEntries[projectId]).forEach(date => {
+            const entry = this.timeEntries[projectId][date];
+            const hours = parseFloat(entry.hours);
+            if (hours > 0) {
+              entries.push({
+                timesheetId: this.timesheetId,
+                projectId,
+                date,
+                hours,
+                comment: entry.comment
+              });
+            }
           });
+        });
+        
+        // Save first then submit
+        if (process.env.NODE_ENV === 'production' || !entries.some(e => e.projectId.startsWith('alpha'))) {
+          timesheetService.saveEntries(entries)
+            .then(() => {
+              this.isDirty = false;
+              this.saved = true;
+              // Now submit after saving
+              proceedWithSubmission();
+            })
+            .catch(error => {
+              console.error('Error saving timesheet before submission:', error);
+              this.loading = false;
+              this.showSnackbar('Error saving timesheet. Please try again.', 'error');
+              this.submitDialog = false;
+            });
+        } else {
+          // Mock save then submit
+          setTimeout(() => {
+            this.isDirty = false;
+            this.saved = true;
+            console.log('Timesheet saved before submission', entries);
+            // Now submit after mock saving
+            proceedWithSubmission();
+          }, 500);
+        }
       } else {
-        // Mock implementation for demo
-        setTimeout(() => {
-          this.timesheetStatus = 'Submitted';
-          this.submitDialog = false;
-          this.loading = false;
-          this.showSnackbar('Timesheet submitted successfully (mock)', 'success');
-        }, 500);
+        // No changes to save, proceed directly to submission
+        proceedWithSubmission();
       }
     },
     
@@ -1474,6 +1549,7 @@ export default {
           }, 500);
         }
       } else {
+        // Update existing timesheet - this code was previously inside the if(!this.timesheetId) block
         // Check if we're using real API or mock data
         if (process.env.NODE_ENV === 'production' || !entries.some(e => e.projectId.startsWith('alpha'))) {
           // Update existing timesheet
