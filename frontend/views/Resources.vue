@@ -451,15 +451,34 @@
                 </v-col>
 
                 <v-col cols="12">
-                  <v-combobox
-                    v-model="editedItem.skills"
-                    :items="skillOptions"
-                    label="Skills"
-                    multiple
-                    chips
-                    small-chips
-                    deletable-chips
-                  ></v-combobox>
+                  <v-card-title class="pa-0">Skills</v-card-title>
+                  <div v-for="(skill, index) in editedItem.skillsWithLevels" :key="index" class="skill-input-row mb-2">
+                    <v-autocomplete
+                      v-model="skill.name"
+                      :items="skillOptions"
+                      label="Skill"
+                      dense
+                      outlined
+                      @change="updateSkillName(index, $event)"
+                    ></v-autocomplete>
+                    <v-slider
+                      v-model="skill.level"
+                      :label="`Proficiency: ${getSkillLevelText(skill.level)}`"
+                      thumb-label
+                      :thumb-size="24"
+                      min="1"
+                      max="5"
+                      ticks
+                      class="ml-3"
+                    ></v-slider>
+                    <v-btn icon small class="mt-3" @click="removeSkill(index)">
+                      <v-icon>mdi-delete</v-icon>
+                    </v-btn>
+                  </div>
+                  <v-btn small color="primary" class="mt-2" @click="addSkill">
+                    <v-icon left>mdi-plus</v-icon>
+                    Add Skill
+                  </v-btn>
                 </v-col>
               </v-row>
             </v-form>
@@ -501,6 +520,7 @@
           <v-tab>Details</v-tab>
           <v-tab>Capacity &amp; Availability</v-tab>
           <v-tab>Projects</v-tab>
+          <v-tab>Skills Report</v-tab>
         </v-tabs>
 
         <v-tabs-items v-model="activeResourceTab">
@@ -781,6 +801,14 @@
               </v-row>
             </v-card-text>
           </v-tab-item>
+
+          <!-- Skills Report Tab -->
+          <v-tab-item>
+            <resource-skill-report 
+              :resources="resources" 
+              :loading="loading"
+            ></resource-skill-report>
+          </v-tab-item>
         </v-tabs-items>
 
         <v-card-actions>
@@ -999,6 +1027,7 @@
 <script>
 import axios from 'axios';
 import moment from 'moment';
+import { resourceService } from '@/services';
 
 export default {
   name: 'ResourcesPage',
@@ -1106,6 +1135,8 @@ export default {
         'UI/UX Design', 'Product Design', 'Database Design', 'SQL', 'MongoDB', 
         'Project Management', 'Agile', 'Scrum', 'DevOps', 'AWS', 'Azure', 'GCP'
       ],
+      skillLevelTexts: ['Not Rated', 'Beginner', 'Intermediate', 'Advanced', 'Expert', 'Master'],
+      
       reportView: 'table',
       reportTimeframe: 'ytd',
       reportType: 'all',
@@ -1142,14 +1173,7 @@ export default {
 
   computed: {
     formTitle() {
-      return this.editedIndex === -1 ? 'New Resource' : 'Edit Resource';
-    },
-    
-    isTimeOffFormValid() {
-      return this.timeOffForm.startDate && 
-             this.timeOffForm.endDate && 
-             this.timeOffForm.reason && 
-             this.timeOffForm.startDate <= this.timeOffForm.endDate;
+      return this.editedIndex === -1 ? 'New Resource' : 'Edit Resource'
     },
     
     filteredResources() {
@@ -1192,9 +1216,18 @@ export default {
         if (this.filters.skills.length > 0) {
           const resourceSkills = resource.skills || [];
           // Check if resource has ALL required skills
-          const hasAllSkills = this.filters.skills.every(skill => 
-            resourceSkills.includes(skill)
-          );
+          const hasAllSkills = this.filters.skills.every(skill => {
+            if (typeof skill === 'string') {
+              return resourceSkills.some(rs => {
+                if (typeof rs === 'string') {
+                  return rs === skill;
+                } else {
+                  return rs.name === skill;
+                }
+              });
+            }
+            return false;
+          });
           if (!hasAllSkills) {
             return false;
           }
@@ -1226,120 +1259,169 @@ export default {
     fetchResources() {
       this.loading = true;
       
-      // Mock data for demo
-      setTimeout(() => {
-        this.resources = [
-          {
-            id: 1,
-            firstName: 'John',
-            lastName: 'Doe',
-            email: 'john.doe@example.com',
-            phone: '(555) 123-4567',
-            department: 'Engineering',
-            role: 'Senior Developer',
-            isActive: true,
-            skills: ['JavaScript', 'React', 'Node.js'],
-            utilization: 85,
-            availabilityStatus: 'Fully Allocated',
-            maxWeeklyHours: 40,
-            startDate: '2020-03-15',
-            costRate: 85,
-            billRate: 150
-          },
-          {
-            id: 2,
-            firstName: 'Jane',
-            lastName: 'Smith',
-            email: 'jane.smith@example.com',
-            phone: '(555) 987-6543',
-            department: 'Design',
-            role: 'UX Designer',
-            isActive: true,
-            skills: ['UI/UX Design', 'Figma', 'Sketch'],
-            utilization: 75,
-            availabilityStatus: 'Partially Available',
-            maxWeeklyHours: 40,
-            startDate: '2021-01-10',
-            costRate: 75,
-            billRate: 140
-          },
-          {
-            id: 3,
-            firstName: 'Michael',
-            lastName: 'Johnson',
-            email: 'michael.johnson@example.com',
-            phone: '(555) 345-6789',
-            department: 'Engineering',
-            role: 'Junior Developer',
-            isActive: true,
-            skills: ['HTML', 'CSS', 'JavaScript'],
-            utilization: 60,
-            availabilityStatus: 'Available',
-            maxWeeklyHours: 40,
-            startDate: '2022-05-20',
-            costRate: 55,
-            billRate: 110
-          },
-          {
-            id: 4,
-            firstName: 'Emily',
-            lastName: 'Davis',
-            email: 'emily.davis@example.com',
-            phone: '(555) 567-8901',
-            department: 'Project Management',
-            role: 'Project Manager',
-            isActive: true,
-            skills: ['Project Management', 'Agile', 'Scrum'],
-            utilization: 90,
-            availabilityStatus: 'Fully Allocated',
-            maxWeeklyHours: 40,
-            startDate: '2019-11-05',
-            costRate: 90,
-            billRate: 160
-          },
-          {
-            id: 5,
-            firstName: 'David',
-            lastName: 'Wilson',
-            email: 'david.wilson@example.com',
-            phone: '(555) 234-5678',
-            department: 'Engineering',
-            role: 'DevOps Engineer',
-            isActive: true,
-            skills: ['AWS', 'Docker', 'Kubernetes'],
-            utilization: 80,
-            availabilityStatus: 'Partially Available',
-            maxWeeklyHours: 40,
-            startDate: '2020-08-12',
-            costRate: 85,
-            billRate: 150
-          },
-          {
-            id: 6,
-            firstName: 'Sarah',
-            lastName: 'Taylor',
-            email: 'sarah.taylor@example.com',
-            phone: '(555) 678-9012',
-            department: 'Design',
-            role: 'Graphic Designer',
-            isActive: false,
-            skills: ['Photoshop', 'Illustrator', 'InDesign'],
-            utilization: 0,
-            availabilityStatus: 'On Leave',
-            maxWeeklyHours: 40,
-            startDate: '2021-02-15',
-            costRate: 70,
-            billRate: 130
-          }
-        ];
-        
-        // Add fullName property to each resource for searching
-        this.resources.forEach(resource => {
-          resource.fullName = `${resource.firstName} ${resource.lastName}`;
+      resourceService.getAllResources()
+        .then(response => {
+          this.resources = response.data.map(resource => {
+            // Format resource data
+            return {
+              id: resource._id || resource.id,
+              firstName: resource.firstName,
+              lastName: resource.lastName,
+              fullName: `${resource.firstName} ${resource.lastName}`,
+              email: resource.email,
+              phone: resource.phone || '',
+              department: resource.department,
+              role: resource.role,
+              isActive: resource.isActive !== undefined ? resource.isActive : true,
+              skills: resource.skills || [],
+              utilization: resource.utilization || 0,
+              availabilityStatus: resource.availabilityStatus || 'Available',
+              maxWeeklyHours: resource.maxWeeklyHours || 40,
+              allocatedHours: resource.allocatedHours || 0,
+              startDate: resource.startDate,
+              costRate: resource.hourlyRate,
+              billRate: resource.billRate
+            };
+          });
+        })
+        .catch(error => {
+          console.error('Error fetching resources:', error);
+          
+          // Fallback to mock data for demonstration
+          setTimeout(() => {
+            this.resources = [
+              {
+                id: 1,
+                firstName: 'John',
+                lastName: 'Doe',
+                email: 'john.doe@example.com',
+                phone: '(555) 123-4567',
+                department: 'Engineering',
+                role: 'Senior Developer',
+                isActive: true,
+                skills: [
+                  { name: 'JavaScript', level: 5 },
+                  { name: 'React', level: 4 },
+                  { name: 'Node.js', level: 4 }
+                ],
+                utilization: 85,
+                availabilityStatus: 'Fully Allocated',
+                maxWeeklyHours: 40,
+                startDate: '2020-03-15',
+                costRate: 85,
+                billRate: 150
+              },
+              {
+                id: 2,
+                firstName: 'Jane',
+                lastName: 'Smith',
+                email: 'jane.smith@example.com',
+                phone: '(555) 987-6543',
+                department: 'Design',
+                role: 'UX Designer',
+                isActive: true,
+                skills: [
+                  { name: 'UI/UX Design', level: 5 },
+                  { name: 'Figma', level: 4 },
+                  { name: 'Sketch', level: 3 }
+                ],
+                utilization: 75,
+                availabilityStatus: 'Partially Available',
+                maxWeeklyHours: 40,
+                startDate: '2021-01-10',
+                costRate: 75,
+                billRate: 140
+              },
+              {
+                id: 3,
+                firstName: 'Michael',
+                lastName: 'Johnson',
+                email: 'michael.johnson@example.com',
+                phone: '(555) 345-6789',
+                department: 'Engineering',
+                role: 'Junior Developer',
+                isActive: true,
+                skills: [
+                  { name: 'HTML', level: 3 },
+                  { name: 'CSS', level: 3 },
+                  { name: 'JavaScript', level: 2 }
+                ],
+                utilization: 60,
+                availabilityStatus: 'Available',
+                maxWeeklyHours: 40,
+                startDate: '2022-05-20',
+                costRate: 55,
+                billRate: 110
+              },
+              {
+                id: 4,
+                firstName: 'Emily',
+                lastName: 'Davis',
+                email: 'emily.davis@example.com',
+                phone: '(555) 567-8901',
+                department: 'Project Management',
+                role: 'Project Manager',
+                isActive: true,
+                skills: [
+                  { name: 'Project Management', level: 5 },
+                  { name: 'Agile', level: 4 },
+                  { name: 'Scrum', level: 5 }
+                ],
+                utilization: 90,
+                availabilityStatus: 'Fully Allocated',
+                maxWeeklyHours: 40,
+                startDate: '2019-11-05',
+                costRate: 90,
+                billRate: 160
+              },
+              {
+                id: 5,
+                firstName: 'David',
+                lastName: 'Wilson',
+                email: 'david.wilson@example.com',
+                phone: '(555) 234-5678',
+                department: 'Engineering',
+                role: 'DevOps Engineer',
+                isActive: true,
+                skills: [
+                  { name: 'AWS', level: 4 },
+                  { name: 'Docker', level: 5 },
+                  { name: 'Kubernetes', level: 3 }
+                ],
+                utilization: 80,
+                availabilityStatus: 'Partially Available',
+                maxWeeklyHours: 40,
+                startDate: '2020-08-12',
+                costRate: 85,
+                billRate: 150
+              },
+              {
+                id: 6,
+                firstName: 'Sarah',
+                lastName: 'Taylor',
+                email: 'sarah.taylor@example.com',
+                phone: '(555) 678-9012',
+                department: 'Design',
+                role: 'Graphic Designer',
+                isActive: false,
+                skills: [
+                  { name: 'Photoshop', level: 5 },
+                  { name: 'Illustrator', level: 4 },
+                  { name: 'InDesign', level: 3 }
+                ],
+                utilization: 0,
+                availabilityStatus: 'On Leave',
+                maxWeeklyHours: 40,
+                startDate: '2021-02-15',
+                costRate: 70,
+                billRate: 130
+              }
+            ];
+          }, 500);
+        })
+        .finally(() => {
+          this.loading = false;
         });
-        
-        this.loading = false;
-      }, 500);
     },
 
     calculateUtilization(user) {
@@ -1434,6 +1516,22 @@ export default {
     editResource(item) {
       this.editedIndex = this.resources.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      
+      // Convert simple skills array to skills with levels
+      if (this.editedItem.skills && !this.editedItem.skillsWithLevels) {
+        this.editedItem.skillsWithLevels = this.editedItem.skills.map(skill => {
+          if (typeof skill === 'string') {
+            // Simple skill (just a name)
+            return { name: skill, level: 3 }; // Default to intermediate level
+          } else {
+            // Already has skill with level format
+            return skill;
+          }
+        });
+      } else if (!this.editedItem.skillsWithLevels) {
+        this.editedItem.skillsWithLevels = [];
+      }
+      
       this.dialogViewResource = false;
       this.dialogResource = true;
     },
@@ -1446,7 +1544,7 @@ export default {
     },
 
     deleteResource() {
-      axios.delete(`/api/users/${this.editedItem.id}`)
+      resourceService.deleteResource(this.editedItem.id)
         .then(() => {
           this.resources.splice(this.editedIndex, 1);
           this.$store.dispatch('setSnackbar', {
@@ -1487,6 +1585,18 @@ export default {
       if (!this.$refs.form.validate()) return;
 
       const isNewResource = this.editedIndex === -1;
+      
+      // Convert skillsWithLevels back to the format needed for the API
+      let convertedSkills = [];
+      if (this.editedItem.skillsWithLevels && this.editedItem.skillsWithLevels.length > 0) {
+        convertedSkills = this.editedItem.skillsWithLevels
+          .filter(skill => skill.name && skill.name.trim() !== '')
+          .map(skill => ({
+            name: skill.name,
+            level: skill.level || 3
+          }));
+      }
+      
       const resourceData = {
         firstName: this.editedItem.firstName,
         lastName: this.editedItem.lastName,
@@ -1496,7 +1606,7 @@ export default {
         department: this.editedItem.department,
         hourlyRate: this.editedItem.hourlyRate,
         isActive: this.editedItem.isActive,
-        skills: this.editedItem.skills,
+        skills: convertedSkills,
         maxWeeklyHours: this.editedItem.maxWeeklyHours,
         allocatedHours: this.editedItem.allocatedHours,
         availabilityStatus: this.editedItem.availabilityStatus,
@@ -1511,16 +1621,16 @@ export default {
         // implement a separate flow to set passwords
       }
 
-      const request = isNewResource
-        ? axios.post('/api/users', resourceData)
-        : axios.put(`/api/users/${this.editedItem.id}`, resourceData);
+      const savePromise = isNewResource
+        ? resourceService.createResource(resourceData)
+        : resourceService.updateResource(this.editedItem.id, resourceData);
 
-      request
+      savePromise
         .then(response => {
           if (isNewResource) {
             // Format the response data to match our resource structure
             const newResource = {
-              id: response.data._id,
+              id: response.data._id || response.data.id,
               firstName: response.data.firstName,
               lastName: response.data.lastName,
               fullName: `${response.data.firstName} ${response.data.lastName}`,
@@ -1684,44 +1794,9 @@ export default {
     
     // eslint-disable-next-line no-unused-vars
     fetchResourceProjects(resourceId) {
-      // This would fetch projects assigned to this resource
-      // For now, use mock data for demonstration
-      this.resourceProjects = [
-        { 
-          id: 1, 
-          name: 'Website Redesign', 
-          status: 'Active', 
-          resourceRole: 'Developer',
-          hoursPerWeek: 15
-        },
-        { 
-          id: 2, 
-          name: 'Mobile App Development', 
-          status: 'On Hold', 
-          resourceRole: 'Lead Developer',
-          hoursPerWeek: 10
-        }
-      ];
+      if (!resourceId) return;
       
-      // Calculate allocated hours
-      const allocatedHours = this.resourceProjects.reduce((total, project) => {
-        return total + (project.hoursPerWeek || 0);
-      }, 0);
-      
-      // Update the viewed resource
-      if (this.viewedResource) {
-        this.viewedResource.allocatedHours = allocatedHours;
-        
-        // Also update in the resources array
-        const index = this.resources.findIndex(r => r.id === this.viewedResource.id);
-        if (index !== -1) {
-          this.resources[index].allocatedHours = allocatedHours;
-        }
-      }
-      
-      // Real implementation would be:
-      /*
-      axios.get(`/api/projects/resource/${resourceId}`)
+      resourceService.getResourceProjects(resourceId)
         .then(response => {
           this.resourceProjects = response.data;
           
@@ -1745,7 +1820,6 @@ export default {
           console.error('Error fetching resource projects:', error);
           this.resourceProjects = [];
         });
-      */
     },
 
     clearFilters() {
@@ -2014,6 +2088,26 @@ export default {
         if (value < 500) return '#FFB74D';
         return '#E57373';
       }
+    },
+
+    // Skill management methods
+    addSkill() {
+      if (!this.editedItem.skillsWithLevels) {
+        this.editedItem.skillsWithLevels = [];
+      }
+      this.editedItem.skillsWithLevels.push({ name: '', level: 3 });
+    },
+    
+    removeSkill(index) {
+      this.editedItem.skillsWithLevels.splice(index, 1);
+    },
+    
+    updateSkillName(index, newName) {
+      this.editedItem.skillsWithLevels[index].name = newName;
+    },
+    
+    getSkillLevelText(level) {
+      return this.skillLevelTexts[level] || 'Not Rated';
     }
   }
 };
@@ -2021,138 +2115,54 @@ export default {
 
 <style scoped>
 .resources-container {
-  padding: 20px;
+  margin-bottom: 20px;
 }
 
-.resources-title {
-  color: #333;
-  font-weight: 500;
+.stats-card {
+  border-left: 4px solid;
+  transition: all 0.3s;
 }
 
-.search-field {
-  max-width: 300px;
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
-.resource-status {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.resource-details h3 {
-  margin-bottom: 8px;
-  font-size: 1.2rem;
-  color: #333;
-}
-
-.resource-details p {
-  margin-bottom: 4px;
-  color: #666;
-}
-
-.resource-skills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
-}
-
-.projects-assigned {
-  margin-top: 24px;
-}
-
-.projects-table {
-  margin-top: 8px;
-}
-
-.resource-dialog .v-card__title {
-  padding-bottom: 8px;
-}
-
-.utilization-meter {
-  width: 100%;
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.v-chip {
-  margin: 2px;
-}
-
-.resource-details-section {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-}
-
-.filter-section {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.actions-column {
-  width: 120px;
-}
-
-.dialog-footer {
-  padding: 16px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.v-card__subtitle {
-  font-size: 14px;
-  color: #666;
-  padding-top: 0;
-}
-
-.simple-chart-container {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  height: 250px;
-  margin: 20px 0;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.month-column {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 50px;
-}
-
-.month-bar {
-  width: 30px;
-  border-radius: 3px 3px 0 0;
+.chart-container {
+  height: 300px;
   position: relative;
+}
+
+.filter-panel {
+  border-left: 4px solid #1976D2;
+}
+
+.project-card {
+  transition: all 0.2s ease;
+}
+
+.project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.report-card {
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.report-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+}
+
+.time-off-history {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.skill-input-row {
   display: flex;
-  justify-content: center;
-  transition: height 0.5s ease;
-}
-
-.month-value {
-  position: absolute;
-  top: -25px;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.month-label {
-  margin-top: 8px;
-  font-size: 12px;
-  white-space: nowrap;
-  transform: rotate(-45deg);
-  text-align: left;
-  width: 70px;
-  height: 30px;
+  align-items: center;
 }
 </style>
