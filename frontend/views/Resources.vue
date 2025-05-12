@@ -1005,9 +1005,9 @@ export default {
   
   data() {
     return {
+      resources: [],
       search: '',
       loading: false,
-      resources: [],
       showFilters: false,
       filters: {
         roles: [],
@@ -1226,136 +1226,120 @@ export default {
     fetchResources() {
       this.loading = true;
       
-      // Mock API call for demonstration
+      // Mock data for demo
       setTimeout(() => {
-        // Sample resource data
-        const mockResources = [
+        this.resources = [
           {
-            id: '1',
+            id: 1,
             firstName: 'John',
             lastName: 'Doe',
             email: 'john.doe@example.com',
             phone: '(555) 123-4567',
-            role: 'Developer',
             department: 'Engineering',
-            hourlyRate: 75,
+            role: 'Senior Developer',
             isActive: true,
             skills: ['JavaScript', 'React', 'Node.js'],
+            utilization: 85,
+            availabilityStatus: 'Fully Allocated',
             maxWeeklyHours: 40,
-            allocatedHours: 32,
-            availabilityStatus: 'Partially Available',
-            nextAvailableDate: null
+            startDate: '2020-03-15',
+            costRate: 85,
+            billRate: 150
           },
           {
-            id: '2',
+            id: 2,
             firstName: 'Jane',
             lastName: 'Smith',
             email: 'jane.smith@example.com',
             phone: '(555) 987-6543',
-            role: 'Designer',
             department: 'Design',
-            hourlyRate: 65,
+            role: 'UX Designer',
             isActive: true,
             skills: ['UI/UX Design', 'Figma', 'Sketch'],
+            utilization: 75,
+            availabilityStatus: 'Partially Available',
             maxWeeklyHours: 40,
-            allocatedHours: 40,
-            availabilityStatus: 'Fully Allocated',
-            nextAvailableDate: '2023-11-20'
+            startDate: '2021-01-10',
+            costRate: 75,
+            billRate: 140
           },
           {
-            id: '3',
-            firstName: 'Mike',
+            id: 3,
+            firstName: 'Michael',
             lastName: 'Johnson',
-            email: 'mike.j@example.com',
-            phone: '(555) 555-5555',
+            email: 'michael.johnson@example.com',
+            phone: '(555) 345-6789',
+            department: 'Engineering',
+            role: 'Junior Developer',
+            isActive: true,
+            skills: ['HTML', 'CSS', 'JavaScript'],
+            utilization: 60,
+            availabilityStatus: 'Available',
+            maxWeeklyHours: 40,
+            startDate: '2022-05-20',
+            costRate: 55,
+            billRate: 110
+          },
+          {
+            id: 4,
+            firstName: 'Emily',
+            lastName: 'Davis',
+            email: 'emily.davis@example.com',
+            phone: '(555) 567-8901',
+            department: 'Project Management',
             role: 'Project Manager',
-            department: 'Product',
-            hourlyRate: 90,
             isActive: true,
             skills: ['Project Management', 'Agile', 'Scrum'],
+            utilization: 90,
+            availabilityStatus: 'Fully Allocated',
             maxWeeklyHours: 40,
-            allocatedHours: 35,
-            availabilityStatus: 'Partially Available',
-            nextAvailableDate: null
+            startDate: '2019-11-05',
+            costRate: 90,
+            billRate: 160
           },
           {
-            id: '4',
-            firstName: 'Sarah',
-            lastName: 'Williams',
-            email: 'sarah.w@example.com',
-            phone: '(555) 444-3333',
-            role: 'Developer',
-            department: 'Engineering',
-            hourlyRate: 72,
-            isActive: false,
-            skills: ['Python', 'Django', 'SQL'],
-            maxWeeklyHours: 0,
-            allocatedHours: 0,
-            availabilityStatus: 'Out of Office',
-            nextAvailableDate: '2024-01-15'
-          },
-          {
-            id: '5',
+            id: 5,
             firstName: 'David',
-            lastName: 'Brown',
-            email: 'david.b@example.com',
-            phone: '(555) 222-1111',
-            role: 'Business Analyst',
-            department: 'Product',
-            hourlyRate: 70,
+            lastName: 'Wilson',
+            email: 'david.wilson@example.com',
+            phone: '(555) 234-5678',
+            department: 'Engineering',
+            role: 'DevOps Engineer',
             isActive: true,
-            skills: ['Business Analysis', 'Requirements Gathering', 'SQL'],
-            maxWeeklyHours: 30,
-            allocatedHours: 25,
+            skills: ['AWS', 'Docker', 'Kubernetes'],
+            utilization: 80,
             availabilityStatus: 'Partially Available',
-            nextAvailableDate: null
+            maxWeeklyHours: 40,
+            startDate: '2020-08-12',
+            costRate: 85,
+            billRate: 150
+          },
+          {
+            id: 6,
+            firstName: 'Sarah',
+            lastName: 'Taylor',
+            email: 'sarah.taylor@example.com',
+            phone: '(555) 678-9012',
+            department: 'Design',
+            role: 'Graphic Designer',
+            isActive: false,
+            skills: ['Photoshop', 'Illustrator', 'InDesign'],
+            utilization: 0,
+            availabilityStatus: 'On Leave',
+            maxWeeklyHours: 40,
+            startDate: '2021-02-15',
+            costRate: 70,
+            billRate: 130
           }
         ];
         
-        this.resources = mockResources.map(resource => ({
-          ...resource,
-          fullName: `${resource.firstName} ${resource.lastName}`,
-          utilization: this.calculateUtilization(resource)
-        }));
+        // Add fullName property to each resource for searching
+        this.resources.forEach(resource => {
+          resource.fullName = `${resource.firstName} ${resource.lastName}`;
+        });
         
         this.loading = false;
       }, 500);
-      
-      /*
-      // Real implementation with axios
-      axios.get('/api/users')
-        .then(response => {
-          this.resources = response.data.map(user => ({
-            id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            fullName: `${user.firstName} ${user.lastName}`,
-            email: user.email,
-            phone: user.phone || '',
-            role: user.role,
-            department: user.department,
-            hourlyRate: user.hourlyRate || 0,
-            isActive: user.isActive !== undefined ? user.isActive : true,
-            utilization: this.calculateUtilization(user),
-            skills: user.skills || [],
-            maxWeeklyHours: user.maxWeeklyHours || 40,
-            allocatedHours: user.allocatedHours || 0,
-            availabilityStatus: user.availabilityStatus || 'Available',
-            nextAvailableDate: user.nextAvailableDate || null
-          }));
-        })
-        .catch(error => {
-          console.error('Error fetching resources:', error);
-          this.$store.dispatch('setSnackbar', {
-            show: true,
-            text: 'Error loading resources. Please try again.',
-            color: 'error'
-          });
-        })
-        .finally(() => {
-          this.loading = false;
-        });
-      */
     },
 
     calculateUtilization(user) {
