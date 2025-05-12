@@ -151,13 +151,25 @@
           </thead>
           <tbody>
             <tr v-for="project in timesheetProjects" :key="project.id">
-              <td>{{ project.name }}</td>
+              <td>
+                <div class="d-flex align-center">
+                  <v-icon
+                    v-if="project.isTimeOff"
+                    small
+                    color="blue"
+                    class="mr-1"
+                  >
+                    mdi-beach
+                  </v-icon>
+                  {{ project.name }}
+                </div>
+              </td>
               <td 
                 v-for="day in daysInPeriod" 
                 :key="`${project.id}-${day.date}`"
                 :class="{ 'weekend-column': day.isWeekend }"
               >
-                <div class="hour-cell" v-if="!day.isWeekend">
+                <div class="hour-cell" :class="{ 'time-off-cell': project.isTimeOff }">
                   <v-text-field
                     v-model="timeEntries[project.id][day.date].hours"
                     type="number"
@@ -169,6 +181,7 @@
                     class="hour-input"
                     :disabled="timesheetStatus === 'Approved' || timesheetStatus === 'Submitted'"
                     @blur="validateHours(project.id, day.date)"
+                    @input="calculateTotals"
                   >
                     <template v-slot:append>
                       <div class="hour-controls">
@@ -202,9 +215,6 @@
                   >
                     <v-icon x-small>{{ timeEntries[project.id][day.date].comment ? 'mdi-comment-check' : 'mdi-comment-plus' }}</v-icon>
                   </v-btn>
-                </div>
-                <div v-else class="weekend-cell">
-                  <!-- Weekend cell -->
                 </div>
               </td>
               <td class="text-center font-weight-bold">
@@ -283,6 +293,23 @@
         </v-card-title>
         <v-card-text>
           <v-container>
+            <v-subheader>Time Off Categories</v-subheader>
+            <v-row>
+              <v-col cols="12">
+                <v-radio-group v-model="selectedProjectId">
+                  <v-radio
+                    v-for="timeOffType in timeOffTypes"
+                    :key="timeOffType.id"
+                    :label="timeOffType.name"
+                    :value="timeOffType.id"
+                  ></v-radio>
+                </v-radio-group>
+              </v-col>
+            </v-row>
+            
+            <v-divider class="my-3"></v-divider>
+            <v-subheader>Projects</v-subheader>
+            
             <v-row v-if="availableProjects.length > 0">
               <v-col cols="12">
                 <v-radio-group v-model="selectedProjectId">
@@ -577,6 +604,12 @@ export default {
         { text: 'Project Manager', value: 'manager' },
         { text: 'Director', value: 'director' },
         { text: 'Administrator', value: 'admin' }
+      ],
+      
+      // Time off types
+      timeOffTypes: [
+        { id: 'vacation', name: 'Vacation' },
+        { id: 'sick', name: 'Sick Time' }
       ]
     };
   },
@@ -902,51 +935,88 @@ export default {
       };
     },
     
-    // Add a project to the timesheet
+    // Add selected project to the timesheet
     addSelectedProject() {
-      if (!this.selectedProjectId || this.availableProjects.length === 0) return;
+      if (!this.selectedProjectId) return;
       
-      const selectedProject = this.availableProjects.find(p => p.id === this.selectedProjectId);
-      if (selectedProject) {
-        // Push to timesheet projects array
-        this.timesheetProjects.push(selectedProject);
+      // Close the dialog
+      this.projectSelectionDialog = false;
+      
+      // Check if this is a time off category
+      const isTimeOffType = this.timeOffTypes.some(type => type.id === this.selectedProjectId);
+      
+      let projectToAdd;
+      
+      if (isTimeOffType) {
+        // Find the time off type
+        const timeOffType = this.timeOffTypes.find(type => type.id === this.selectedProjectId);
         
-        // Initialize time entries for this project
-        this.initializeProjectEntries(selectedProject.id);
-        
-        // Show confirmation
-        this.showSnackbar(`Added ${selectedProject.name} to timesheet`, 'success');
+        // Create a "virtual" project for the time off
+        projectToAdd = {
+          id: this.selectedProjectId,
+          name: timeOffType.name,
+          isTimeOff: true
+        };
+      } else {
+        // Find the selected project
+        projectToAdd = this.projects.find(p => p.id === this.selectedProjectId);
       }
       
-      // Reset selection and close dialog
+      // Add to timesheetProjects if not already there
+      if (!this.timesheetProjects.some(p => p.id === projectToAdd.id)) {
+        this.timesheetProjects.push(projectToAdd);
+        
+        // Initialize time entries for this project
+        this.initializeProjectEntries(projectToAdd.id);
+        
+        // Show confirmation message
+        let message = '';
+        if (isTimeOffType) {
+          message = `Added ${projectToAdd.name} category to timesheet. Enter hours on the days you were absent.`;
+          this.showSnackbar(message, 'info');
+        } else {
+          message = `Added ${projectToAdd.name} to timesheet`;
+          this.showSnackbar(message, 'success');
+        }
+      }
+      
+      // Reset selection
       this.selectedProjectId = null;
-      this.projectSelectionDialog = false;
     },
     
     // Calculate total hours for a project
     calculateProjectTotal(projectId) {
-      if (!this.timeEntries[projectId]) return 0;
+      let total = 0;
       
-      return Object.values(this.timeEntries[projectId])
-        .reduce((total, entry) => {
-          return total + (parseFloat(entry.hours) || 0);
-        }, 0);
+      if (this.timeEntries[projectId]) {
+        Object.keys(this.timeEntries[projectId]).forEach(date => {
+          const hours = parseFloat(this.timeEntries[projectId][date].hours);
+          if (!isNaN(hours)) {
+            total += hours;
+          }
+        });
+      }
+      
+      return total;
     },
     
-    // Calculate total hours for a day across all projects
+    // Calculate daily total
     calculateDailyTotal(date) {
       let total = 0;
       
       Object.keys(this.timeEntries).forEach(projectId => {
         if (this.timeEntries[projectId][date]) {
-          total += parseFloat(this.timeEntries[projectId][date].hours || 0);
+          const hours = parseFloat(this.timeEntries[projectId][date].hours);
+          if (!isNaN(hours)) {
+            total += hours;
+          }
         }
       });
       
       return total;
     },
     
-    // Calculate total hours for the entire timesheet
+    // Calculate total hours across all entries
     calculateTotalHours() {
       let total = 0;
       
@@ -955,6 +1025,15 @@ export default {
       });
       
       return total;
+    },
+
+    // Calculate all totals immediately when data changes
+    calculateTotals() {
+      // This method is called immediately when input changes
+      // No need to do anything here as Vue's reactivity will recalculate the computed properties
+      this.isDirty = true;
+      this.saved = false;
+      this.debouncedSave();
     },
     
     // Open comment dialog
@@ -983,13 +1062,29 @@ export default {
         return;
       }
       
+      const { projectId } = this.currentEntry;
+      
+      // Get the project to check if it's a time off entry
+      const project = this.timesheetProjects.find(p => p.id === projectId);
+      const isTimeOff = project && project.isTimeOff;
+      
+      // For time off, we can auto-generate a comment if it's empty
       if (!this.currentEntry.comment.trim()) {
-        this.commentError = 'Comment is required';
-        return;
+        if (isTimeOff) {
+          if (projectId === 'vacation') {
+            this.currentEntry.comment = 'Vacation day';
+          } else if (projectId === 'sick') {
+            this.currentEntry.comment = 'Sick day';
+          }
+        } else {
+          // For regular projects, comments are required
+          this.commentError = 'Comment is required';
+          return;
+        }
       }
       
       // Update the entry
-      const { projectId, date, hours, comment } = this.currentEntry;
+      const { date, hours, comment } = this.currentEntry;
       
       // Ensure the time entry structure exists
       if (!this.timeEntries[projectId]) {
@@ -1008,6 +1103,9 @@ export default {
       this.commentDialog = false;
       this.isDirty = true;
       this.saved = false;
+      
+      // Calculate totals immediately
+      this.calculateTotals();
     },
     
     // Validate and save an entry
@@ -1046,10 +1144,28 @@ export default {
           this.timeEntries[projectId][date].hours = roundedHours.toString();
         }
         
+        // Get the project to check if it's a time off entry
+        const project = this.timesheetProjects.find(p => p.id === projectId);
+        const isTimeOff = project && project.isTimeOff;
+        
         // If hours are greater than 0, prompt for a comment if none exists
-        if (numericHours > 0 && !this.timeEntries[projectId][date].comment) {
-          this.openCommentDialog(projectId, date);
+        // For time off entries, auto-populate a default comment if empty
+        if (numericHours > 0) {
+          if (isTimeOff && !this.timeEntries[projectId][date].comment) {
+            // Auto-populate comment for time off entries
+            if (projectId === 'vacation') {
+              this.timeEntries[projectId][date].comment = 'Vacation day';
+            } else if (projectId === 'sick') {
+              this.timeEntries[projectId][date].comment = 'Sick day';
+            }
+          } else if (!isTimeOff && !this.timeEntries[projectId][date].comment) {
+            // Prompt for comment for regular project entries
+            this.openCommentDialog(projectId, date);
+          }
         }
+        
+        // Calculate totals immediately
+        this.calculateTotals();
         
         // Mark as need saving
         this.isDirty = true;
@@ -1195,7 +1311,7 @@ export default {
       }
     },
     
-    // Add this simplified method to validate and save hours
+    // Validate hours
     validateHours(projectId, date) {
       try {
         if (!this.timeEntries[projectId] || !this.timeEntries[projectId][date]) return;
@@ -1211,6 +1327,22 @@ export default {
           // Round to 0.25 increments
           const roundedHours = Math.round(numericHours * 4) / 4;
           this.timeEntries[projectId][date].hours = roundedHours.toString();
+          
+          // Get the project to check if it's a time off entry
+          const project = this.timesheetProjects.find(p => p.id === projectId);
+          const isTimeOff = project && project.isTimeOff;
+          
+          // For time off entries, auto-populate a default comment if empty
+          if (isTimeOff && numericHours > 0 && !this.timeEntries[projectId][date].comment) {
+            if (projectId === 'vacation') {
+              this.timeEntries[projectId][date].comment = 'Vacation day';
+            } else if (projectId === 'sick') {
+              this.timeEntries[projectId][date].comment = 'Sick day';
+            }
+          }
+          
+          // Calculate totals
+          this.calculateTotals();
         } else {
           // Reset invalid entries
           this.timeEntries[projectId][date].hours = '';
@@ -1240,13 +1372,29 @@ export default {
     incrementHours(projectId, date, increment) {
       if (!this.timeEntries[projectId] || !this.timeEntries[projectId][date]) return;
       
-      const currentHours = parseFloat(this.timeEntries[projectId][date].hours);
+      const currentHours = parseFloat(this.timeEntries[projectId][date].hours) || 0;
       const newHours = currentHours + increment;
       
       if (newHours >= 0 && newHours <= 24) {
         this.timeEntries[projectId][date].hours = newHours.toString();
+        
+        // Get the project to check if it's a time off entry
+        const project = this.timesheetProjects.find(p => p.id === projectId);
+        const isTimeOff = project && project.isTimeOff;
+        
+        // Auto-populate comments for time off entries if hours > 0
+        if (isTimeOff && newHours > 0 && !this.timeEntries[projectId][date].comment) {
+          if (projectId === 'vacation') {
+            this.timeEntries[projectId][date].comment = 'Vacation day';
+          } else if (projectId === 'sick') {
+            this.timeEntries[projectId][date].comment = 'Sick day';
+          }
+        }
+        
         this.isDirty = true;
         this.saved = false;
+        // Calculate totals immediately
+        this.calculateTotals();
       }
     }
   }
@@ -1305,7 +1453,15 @@ export default {
 }
 
 .timesheet-table >>> .weekend-column {
-  background-color: #f5f5f5;
+  background-color: #f4f7fb; /* Lighter blue instead of gray */
+}
+
+.timesheet-table >>> .time-off-cell {
+  background-color: #e3f2fd; /* Light blue for vacation/time off */
+}
+
+.timesheet-table >>> .time-off-cell.weekend-column {
+  background-color: #bbdefb; /* Slightly darker blue for weekend time off */
 }
 
 .timesheet-table >>> .daily-total-row {
