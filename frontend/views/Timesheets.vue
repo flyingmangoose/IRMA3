@@ -162,6 +162,16 @@
                     mdi-beach
                   </v-icon>
                   {{ project.name }}
+                  <v-btn
+                    v-if="timesheetStatus === 'Draft'"
+                    icon
+                    x-small
+                    class="ml-1"
+                    title="Remove project"
+                    @click.stop="confirmRemoveProject(project)"
+                  >
+                    <v-icon x-small color="grey">mdi-close</v-icon>
+                  </v-btn>
                 </div>
               </td>
               <td 
@@ -505,6 +515,30 @@
       </v-card>
     </v-dialog>
 
+    <!-- Remove Project Confirmation Dialog -->
+    <v-dialog v-model="removeProjectDialog" max-width="400px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">Remove Project</span>
+        </v-card-title>
+        <v-card-text>
+          <v-container>
+            <p>Are you sure you want to remove <strong>{{ projectToRemove ? projectToRemove.name : '' }}</strong> from this timesheet?</p>
+            <p v-if="hasEntriesForProject">This will also remove all time entries for this project.</p>
+          </v-container>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="grey darken-1" text @click="removeProjectDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn color="error" text @click="removeProject">
+            Remove Project
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-snackbar
       v-model="snackbar.show"
       :color="snackbar.color"
@@ -529,6 +563,7 @@
 import axios from 'axios';
 import { mapGetters } from 'vuex';
 import moment from 'moment';
+import { projectService, timesheetService } from '../src/services';
 
 export default {
   name: 'TimesheetsPage',
@@ -539,6 +574,10 @@ export default {
       loading: false,
       startDate: moment().startOf('week').format('YYYY-MM-DD'),
       endDate: moment().add(13, 'days').format('YYYY-MM-DD'), // Two-week period
+      
+      // Timesheet data
+      timesheetId: null,
+      timesheetData: null,
       
       projects: [], // All available projects
       timesheetProjects: [], // Projects added to timesheet
@@ -610,7 +649,11 @@ export default {
       timeOffTypes: [
         { id: 'vacation', name: 'Vacation' },
         { id: 'sick', name: 'Sick Time' }
-      ]
+      ],
+      
+      // Remove project dialog
+      removeProjectDialog: false,
+      projectToRemove: null,
     };
   },
   
@@ -711,10 +754,120 @@ export default {
   
   methods: {
     initialize() {
+      this.fetchCurrentTimesheet();
       this.fetchProjects();
       this.initializeUser();
-      // Initialize empty timesheet structure
-      this.initializeTimeEntries();
+    },
+    
+    // Fetch current timesheet for the period
+    fetchCurrentTimesheet() {
+      this.loading = true;
+      
+      // Get the current timesheet for this period
+      timesheetService.getCurrentTimesheet(this.startDate, this.endDate)
+        .then(response => {
+          if (response && response.data) {
+            // Set timesheet data
+            this.timesheetId = response.data.id;
+            this.timesheetData = response.data;
+            this.timesheetStatus = response.data.status || 'Draft';
+            
+            // If the timesheet has existing entries, load them
+            if (response.data.entries && response.data.entries.length > 0) {
+              this.timeEntries = {};
+              
+              // Group entries by project
+              const projectIds = [...new Set(response.data.entries.map(entry => entry.projectId))];
+              
+              // Fetch project details if not already available
+              projectIds.forEach(projectId => {
+                const projectExists = this.projects.some(p => p.id === projectId);
+                
+                if (!projectExists && projectId !== 'vacation' && projectId !== 'sick') {
+                  projectService.getProjectById(projectId)
+                    .then(projectResponse => {
+                      if (projectResponse && projectResponse.data) {
+                        const project = projectResponse.data;
+                        this.projects.push({
+                          id: project.id,
+                          name: project.name,
+                          clientId: project.clientId,
+                          clientName: project.clientName || project.client?.name || '',
+                          status: project.status
+                        });
+                        
+                        // Add to timesheet projects
+                        this.addProjectToTimesheet(project.id);
+                      }
+                    })
+                    .catch(error => {
+                      console.error(`Error fetching project ${projectId}:`, error);
+                    });
+                } else {
+                  // Add to timesheet projects if vacation or sick
+                  if (projectId === 'vacation' || projectId === 'sick') {
+                    const timeOffType = this.timeOffTypes.find(type => type.id === projectId);
+                    this.addTimeOffToTimesheet(timeOffType);
+                  } else {
+                    this.addProjectToTimesheet(projectId);
+                  }
+                }
+              });
+              
+              // Initialize time entries from the fetched data
+              response.data.entries.forEach(entry => {
+                if (!this.timeEntries[entry.projectId]) {
+                  this.timeEntries[entry.projectId] = {};
+                }
+                
+                this.timeEntries[entry.projectId][entry.date] = {
+                  hours: entry.hours.toString(),
+                  comment: entry.comment || ''
+                };
+              });
+            } else {
+              // No entries yet, initialize empty structure
+              this.initializeTimeEntries();
+            }
+          } else {
+            // No timesheet exists yet, initialize empty structure
+            this.initializeTimeEntries();
+          }
+          
+          this.loading = false;
+        })
+        .catch(error => {
+          console.error('Error fetching timesheet:', error);
+          
+          // Initialize empty structure if error
+          this.initializeTimeEntries();
+          this.loading = false;
+        });
+    },
+    
+    // Add a project to the timesheet projects list
+    addProjectToTimesheet(projectId) {
+      const project = this.projects.find(p => p.id === projectId);
+      
+      if (project && !this.timesheetProjects.some(p => p.id === projectId)) {
+        this.timesheetProjects.push(project);
+        this.initializeProjectEntries(projectId);
+      }
+    },
+    
+    // Add time off type to timesheet
+    addTimeOffToTimesheet(timeOffType) {
+      if (!timeOffType) return;
+      
+      if (!this.timesheetProjects.some(p => p.id === timeOffType.id)) {
+        this.timesheetProjects.push({
+          id: timeOffType.id,
+          name: timeOffType.name,
+          isTimeOff: true
+        });
+        
+        this.initializeProjectEntries(timeOffType.id);
+      }
     },
     
     // Initialize empty timesheet entries structure
@@ -749,22 +902,49 @@ export default {
     fetchProjects() {
       this.loading = true;
       
-      // Mock data
-      setTimeout(() => {
-        this.projects = [
-          { id: 'alpha', name: 'Project Alpha' },
-          { id: 'beta', name: 'Project Beta' },
-          { id: 'gamma', name: 'Project Gamma' },
-          { id: 'delta', name: 'Project Delta' }
-        ];
-        
-        // Add initial projects to timesheet
-        this.timesheetProjects = []; // Start with no projects for simplicity
-        
-        this.loading = false;
-      }, 300);
-      
-      // Real implementation would use axios as in the original code
+      // Get user's assigned projects
+      projectService.getUserProjects()
+        .then(response => {
+          // Use mock data as fallback if API not available yet
+          if (response && response.data) {
+            this.projects = response.data.map(project => ({
+              id: project.id,
+              name: project.name,
+              clientId: project.clientId,
+              clientName: project.clientName || project.client?.name || '',
+              projectManagerId: project.projectManagerId,
+              projectManagerName: project.projectManagerName || '',
+              status: project.status
+            }));
+          } else {
+            // Fallback to mock data
+            this.projects = [
+              { id: 'alpha', name: 'Project Alpha' },
+              { id: 'beta', name: 'Project Beta' },
+              { id: 'gamma', name: 'Project Gamma' },
+              { id: 'delta', name: 'Project Delta' }
+            ];
+          }
+          
+          // Add initial projects to timesheet
+          this.timesheetProjects = []; // Start with no projects for simplicity
+          
+          this.loading = false;
+        })
+        .catch(error => {
+          console.error('Error fetching projects:', error);
+          
+          // Fallback to mock data
+          this.projects = [
+            { id: 'alpha', name: 'Project Alpha' },
+            { id: 'beta', name: 'Project Beta' },
+            { id: 'gamma', name: 'Project Gamma' },
+            { id: 'delta', name: 'Project Delta' }
+          ];
+          
+          this.loading = false;
+          this.showSnackbar('Error fetching projects. Using mock data.', 'error');
+        });
     },
     
     // Setup user information
@@ -832,17 +1012,44 @@ export default {
         this.showSnackbar('Some entries are missing comments. Consider adding them for better tracking.', 'warning');
       }
       
-      // Update timesheet status
-      setTimeout(() => {
-        this.timesheetStatus = 'Submitted';
-        this.submitDialog = false;
+      // If no timesheet ID, save it first
+      if (!this.timesheetId) {
+        this.saveTimesheet();
         this.loading = false;
-        
-        // Show success message
-        this.showSnackbar('Timesheet submitted successfully', 'success');
-        
-        // In real app, this would be an API call instead of setTimeout
-      }, 500);
+        this.showSnackbar('Please save the timesheet first before submitting', 'error');
+        this.submitDialog = false;
+        return;
+      }
+      
+      // Use mock data for demo or real API in production
+      if (process.env.NODE_ENV === 'production' && this.timesheetId && !this.timesheetId.toString().startsWith('mock')) {
+        // Real implementation using the API service
+        timesheetService.submitTimesheet(this.timesheetId)
+          .then(response => {
+            if (response && response.data) {
+              this.timesheetData = response.data;
+              this.timesheetStatus = 'Submitted';
+            } else {
+              this.timesheetStatus = 'Submitted';
+            }
+            this.submitDialog = false;
+            this.loading = false;
+            this.showSnackbar('Timesheet submitted successfully', 'success');
+          })
+          .catch(error => {
+            console.error('Error submitting timesheet:', error);
+            this.loading = false;
+            this.showSnackbar('Error submitting timesheet. Please try again.', 'error');
+          });
+      } else {
+        // Mock implementation for demo
+        setTimeout(() => {
+          this.timesheetStatus = 'Submitted';
+          this.submitDialog = false;
+          this.loading = false;
+          this.showSnackbar('Timesheet submitted successfully (mock)', 'success');
+        }, 500);
+      }
     },
     
     // Determine who should approve this timesheet based on hierarchy
@@ -978,6 +1185,10 @@ export default {
           message = `Added ${projectToAdd.name} to timesheet`;
           this.showSnackbar(message, 'success');
         }
+        
+        // Mark as dirty to trigger save
+        this.isDirty = true;
+        this.saved = false;
       }
       
       // Reset selection
@@ -1217,6 +1428,7 @@ export default {
           const hours = parseFloat(entry.hours);
           if (hours > 0) {
             entries.push({
+              timesheetId: this.timesheetId,
               projectId,
               date,
               hours,
@@ -1226,34 +1438,65 @@ export default {
         });
       });
       
-      // Mock save
-      setTimeout(() => {
-        this.isDirty = false;
-        this.saved = true;
-        console.log('Timesheet saved', entries);
-      }, 500);
-      
-      // Real implementation:
-      /*
-      axios.post('/api/timeentries/batch', { entries })
-        .then(() => {
-          this.isDirty = false;
-          this.saved = true;
-          this.$store.dispatch('setSnackbar', {
-            show: true,
-            text: 'Timesheet saved',
-            color: 'success'
-          });
-        })
-        .catch(error => {
-          console.error('Error saving timesheet:', error);
-          this.$store.dispatch('setSnackbar', {
-            show: true,
-            text: 'Error saving timesheet',
-            color: 'error'
-          });
-        });
-      */
+      // If no timesheet ID yet, we need to create one first
+      if (!this.timesheetId) {
+        const timesheetData = {
+          startDate: this.startDate,
+          endDate: this.endDate,
+          entries
+        };
+        
+        // Check if we're using real API or mock data
+        if (process.env.NODE_ENV === 'production' || !entries.some(e => e.projectId.startsWith('alpha'))) {
+          // Create a new timesheet
+          timesheetService.createTimesheet(timesheetData)
+            .then(response => {
+              if (response && response.data) {
+                this.timesheetId = response.data.id;
+                this.timesheetData = response.data;
+                this.isDirty = false;
+                this.saved = true;
+                this.showSnackbar('Timesheet created successfully', 'success');
+              }
+            })
+            .catch(error => {
+              console.error('Error creating timesheet:', error);
+              this.showSnackbar('Error creating timesheet. Please try again.', 'error');
+            });
+        } else {
+          // Mock create for development/demo
+          setTimeout(() => {
+            this.timesheetId = Math.random().toString(36).substring(2, 9);
+            this.isDirty = false;
+            this.saved = true;
+            console.log('Timesheet created', timesheetData);
+            this.showSnackbar('Timesheet created (mock)', 'success');
+          }, 500);
+        }
+      } else {
+        // Check if we're using real API or mock data
+        if (process.env.NODE_ENV === 'production' || !entries.some(e => e.projectId.startsWith('alpha'))) {
+          // Update existing timesheet
+          timesheetService.saveEntries(entries)
+            .then(() => {
+              this.isDirty = false;
+              this.saved = true;
+              this.showSnackbar('Timesheet saved successfully', 'success');
+            })
+            .catch(error => {
+              console.error('Error saving timesheet:', error);
+              this.showSnackbar('Error saving timesheet. Please try again.', 'error');
+            });
+        } else {
+          // Mock save for development/demo
+          setTimeout(() => {
+            this.isDirty = false;
+            this.saved = true;
+            console.log('Timesheet saved', entries);
+            this.showSnackbar('Timesheet saved (mock)', 'success');
+          }, 500);
+        }
+      }
     },
     
     // Debounce function to limit API calls
@@ -1396,7 +1639,53 @@ export default {
         // Calculate totals immediately
         this.calculateTotals();
       }
-    }
+    },
+    
+    // Confirm removing a project from the timesheet
+    confirmRemoveProject(project) {
+      // Can't remove if timesheet is not in Draft status
+      if (this.timesheetStatus !== 'Draft') {
+        this.showSnackbar('Cannot remove projects from a submitted or approved timesheet', 'error');
+        return;
+      }
+      
+      this.projectToRemove = project;
+      this.removeProjectDialog = true;
+    },
+    
+    // Check if project has time entries
+    hasEntriesForProject() {
+      if (!this.projectToRemove || !this.timeEntries[this.projectToRemove.id]) return false;
+      
+      return Object.values(this.timeEntries[this.projectToRemove.id]).some(entry => {
+        const hours = parseFloat(entry.hours);
+        return !isNaN(hours) && hours > 0;
+      });
+    },
+    
+    // Remove project from timesheet
+    removeProject() {
+      if (!this.projectToRemove) return;
+      
+      // Remove from timesheet projects
+      const index = this.timesheetProjects.findIndex(p => p.id === this.projectToRemove.id);
+      if (index !== -1) {
+        this.timesheetProjects.splice(index, 1);
+      }
+      
+      // Remove time entries
+      if (this.timeEntries[this.projectToRemove.id]) {
+        delete this.timeEntries[this.projectToRemove.id];
+      }
+      
+      // If this is a persisted timesheet, mark as dirty to save the changes
+      this.isDirty = true;
+      this.saved = false;
+      
+      this.showSnackbar(`${this.projectToRemove.name} removed from timesheet`, 'success');
+      this.removeProjectDialog = false;
+      this.projectToRemove = null;
+    },
   }
 };
 </script>
