@@ -130,7 +130,19 @@
                     label="Client"
                     :rules="[v => !!v || 'Client is required']"
                     required
-                  ></v-select>
+                  >
+                    <template v-slot:append-item>
+                      <v-divider class="mb-2"></v-divider>
+                      <v-list-item @click="openNewClientDialog">
+                        <v-list-item-avatar>
+                          <v-icon>mdi-plus</v-icon>
+                        </v-list-item-avatar>
+                        <v-list-item-content>
+                          <v-list-item-title>Create New Client</v-list-item-title>
+                        </v-list-item-content>
+                      </v-list-item>
+                    </template>
+                  </v-select>
                 </v-col>
 
                 <v-col cols="12">
@@ -683,10 +695,158 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- New Client Dialog -->
+    <v-dialog v-model="dialogNewClient" max-width="600px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">New Client</span>
+        </v-card-title>
+
+        <v-card-text>
+          <v-container>
+            <v-form ref="clientForm" v-model="clientFormValid">
+              <v-row>
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="newClient.name"
+                    label="Client Name"
+                    :rules="[v => !!v || 'Client name is required']"
+                    required
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="newClient.contactPerson"
+                    label="Contact Person"
+                    :rules="[v => !!v || 'Contact person is required']"
+                    required
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="newClient.email"
+                    label="Email"
+                    :rules="emailRules"
+                    required
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model="newClient.phone"
+                    label="Phone"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="newClient.address.street"
+                    label="Street Address"
+                  ></v-text-field>
+                </v-col>
+
+                <v-row>
+                  <v-col cols="12" sm="6">
+                    <v-text-field
+                      v-model="newClient.address.city"
+                      label="City"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col cols="12" sm="3">
+                    <v-text-field
+                      v-model="newClient.address.state"
+                      label="State/Province"
+                    ></v-text-field>
+                  </v-col>
+
+                  <v-col cols="12" sm="3">
+                    <v-text-field
+                      v-model="newClient.address.zipCode"
+                      label="Zip/Postal Code"
+                    ></v-text-field>
+                  </v-col>
+                </v-row>
+
+                <v-col cols="12">
+                  <v-text-field
+                    v-model="newClient.address.country"
+                    label="Country"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-text-field
+                    v-model.number="newClient.totalBudget"
+                    label="Total Budget"
+                    prefix="$"
+                    type="number"
+                  ></v-text-field>
+                </v-col>
+
+                <v-col cols="12" sm="6">
+                  <v-switch
+                    v-model="newClient.isActive"
+                    label="Active Client"
+                    color="success"
+                  ></v-switch>
+                </v-col>
+
+                <v-col cols="12">
+                  <v-textarea
+                    v-model="newClient.notes"
+                    label="Notes"
+                    rows="3"
+                  ></v-textarea>
+                </v-col>
+              </v-row>
+            </v-form>
+          </v-container>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn color="blue darken-1" text @click="closeNewClientDialog">
+            Cancel
+          </v-btn>
+          <v-btn
+            color="blue darken-1"
+            text
+            @click="saveNewClient"
+            :disabled="!clientFormValid"
+          >
+            Save
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- Success Snackbar -->
+    <v-snackbar
+      v-model="snackbar.show"
+      :color="snackbar.color"
+      :timeout="snackbar.timeout"
+    >
+      {{ snackbar.text }}
+      <template v-slot:action="{ attrs }">
+        <v-btn
+          text
+          v-bind="attrs"
+          @click="snackbar.show = false"
+        >
+          Close
+        </v-btn>
+      </template>
+    </v-snackbar>
   </div>
 </template>
 
 <script>
+import { clientService } from '@/services';
+
 export default {
   name: 'ProjectsPage',
   data() {
@@ -933,8 +1093,44 @@ export default {
         { id: '7', name: 'Tom Jackson', department: 'Data', baseRate: 140 },
         { id: '8', name: 'Rachel Kim', department: 'Analytics', baseRate: 120 },
         { id: '9', name: 'Michael Rodriguez', department: 'Enterprise', baseRate: 145 }
-      ]
+      ],
+      
+      // New client form
+      dialogNewClient: false,
+      newClient: {
+        name: '',
+        contactPerson: '',
+        email: '',
+        phone: '',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: ''
+        },
+        totalBudget: 0,
+        isActive: true,
+        notes: ''
+      },
+      clientFormValid: true,
+      emailRules: [
+        v => !!v || 'Email is required',
+        v => /.+@.+\..+/.test(v) || 'Email must be valid'
+      ],
+      
+      // Snackbar
+      snackbar: {
+        show: false,
+        text: '',
+        color: 'success',
+        timeout: 3000
+      }
     }
+  },
+  
+  created() {
+    this.fetchClients();
   },
   
   computed: {
@@ -944,6 +1140,17 @@ export default {
   },
   
   methods: {
+    // Fetch clients from API
+    async fetchClients() {
+      try {
+        const response = await clientService.getAllClients();
+        this.clients = response.data;
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+        // Keep mock clients as fallback
+      }
+    },
+    
     // Get appropriate color for status chip
     getStatusColor(status) {
       switch (status) {
@@ -1238,6 +1445,115 @@ export default {
         if (projectIndex !== -1) {
           this.projects[projectIndex].team = [...this.viewedProject.team];
         }
+      }
+    },
+    
+    // Open the new client dialog
+    openNewClientDialog() {
+      // Reset the form to default values before showing the dialog
+      this.newClient = {
+        name: '',
+        contactPerson: '',
+        email: '',
+        phone: '',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          zipCode: '',
+          country: ''
+        },
+        totalBudget: 0,
+        isActive: true,
+        notes: ''
+      };
+      
+      // Open the dialog
+      this.dialogNewClient = true;
+      
+      // Focus on the first field after the dialog is shown
+      this.$nextTick(() => {
+        const firstInput = this.$refs.clientForm.$el.querySelector('input');
+        if (firstInput) {
+          firstInput.focus();
+        }
+      });
+    },
+    
+    // Close the new client dialog
+    closeNewClientDialog() {
+      this.dialogNewClient = false;
+      
+      // Reset form validation
+      if (this.$refs.clientForm) {
+        this.$refs.clientForm.reset();
+      }
+    },
+    
+    // Save the new client
+    async saveNewClient() {
+      // Validate the form
+      if (!this.$refs.clientForm || !this.$refs.clientForm.validate()) return;
+      
+      try {
+        // Prepare client data
+        const clientData = {
+          name: this.newClient.name.trim(),
+          contactPerson: this.newClient.contactPerson.trim(),
+          email: this.newClient.email.trim(),
+          phone: this.newClient.phone ? this.newClient.phone.trim() : '',
+          address: {
+            street: this.newClient.address.street ? this.newClient.address.street.trim() : '',
+            city: this.newClient.address.city ? this.newClient.address.city.trim() : '',
+            state: this.newClient.address.state ? this.newClient.address.state.trim() : '',
+            zipCode: this.newClient.address.zipCode ? this.newClient.address.zipCode.trim() : '',
+            country: this.newClient.address.country ? this.newClient.address.country.trim() : ''
+          },
+          totalBudget: this.newClient.totalBudget || 0,
+          isActive: this.newClient.isActive,
+          notes: this.newClient.notes ? this.newClient.notes.trim() : ''
+        };
+        
+        // Call API to create client
+        const response = await clientService.createClient(clientData);
+        const newClient = response.data;
+        
+        // Add to clients array
+        this.clients.push(newClient);
+        
+        // Select the new client in the project form
+        this.editedItem.clientId = newClient.id;
+        
+        // Show success message
+        this.snackbar.text = `New client "${newClient.name}" created successfully!`;
+        this.snackbar.color = 'success';
+        this.snackbar.show = true;
+        
+        // Reset the form and close the dialog
+        this.newClient = {
+          name: '',
+          contactPerson: '',
+          email: '',
+          phone: '',
+          address: {
+            street: '',
+            city: '',
+            state: '',
+            zipCode: '',
+            country: ''
+          },
+          totalBudget: 0,
+          isActive: true,
+          notes: ''
+        };
+        
+        this.closeNewClientDialog();
+      } catch (error) {
+        // Handle API errors
+        console.error('Error creating client:', error);
+        this.snackbar.text = error.response?.data?.msg || 'Error creating client. Please try again.';
+        this.snackbar.color = 'error';
+        this.snackbar.show = true;
       }
     }
   }

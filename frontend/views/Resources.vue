@@ -185,6 +185,188 @@
       </v-data-table>
     </v-card>
 
+    <!-- Resources Report Card -->
+    <v-card class="mb-4">
+      <v-card-title>
+        Resource Reports
+        <v-spacer></v-spacer>
+        <v-btn-toggle v-model="reportView" mandatory class="ml-2">
+          <v-btn value="table">
+            <v-icon>mdi-table</v-icon>
+          </v-btn>
+          <v-btn value="chart">
+            <v-icon>mdi-chart-bar</v-icon>
+          </v-btn>
+        </v-btn-toggle>
+      </v-card-title>
+
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" sm="3">
+            <v-select
+              v-model="reportTimeframe"
+              :items="timeframeOptions"
+              label="Timeframe"
+              outlined
+              dense
+              @change="generateResourceReport"
+            ></v-select>
+          </v-col>
+          
+          <v-col cols="12" sm="3">
+            <v-select
+              v-model="reportType"
+              :items="reportTypeOptions"
+              label="Report Type"
+              outlined
+              dense
+              @change="generateResourceReport"
+            ></v-select>
+          </v-col>
+          
+          <v-col cols="12" sm="3">
+            <v-autocomplete
+              v-model="selectedResource"
+              :items="resources"
+              item-text="fullName"
+              item-value="id"
+              label="Search by Resource"
+              outlined
+              dense
+              clearable
+              @change="generateResourceReport"
+            ></v-autocomplete>
+          </v-col>
+          
+          <v-col cols="12" sm="3">
+            <v-menu
+              ref="dateMenu"
+              v-model="dateMenu"
+              :close-on-content-click="false"
+              transition="scale-transition"
+              offset-y
+              min-width="auto"
+            >
+              <template v-slot:activator="{ on, attrs }">
+                <v-text-field
+                  v-model="dateRangeText"
+                  label="Custom Date Range"
+                  prepend-icon="mdi-calendar"
+                  readonly
+                  outlined
+                  dense
+                  v-bind="attrs"
+                  v-on="on"
+                ></v-text-field>
+              </template>
+              <v-date-picker
+                v-model="dates"
+                range
+                no-title
+                @change="dateMenu = false"
+                @input="generateResourceReport"
+              ></v-date-picker>
+            </v-menu>
+          </v-col>
+        </v-row>
+        
+        <!-- Report loading indicator -->
+        <div v-if="reportLoading" class="text-center my-4">
+          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+          <div class="mt-2">Loading report data...</div>
+        </div>
+        
+        <!-- Table View -->
+        <div v-else-if="reportView === 'table' && !reportLoading">
+          <v-data-table
+            :headers="reportHeaders"
+            :items="reportData"
+            :items-per-page="10"
+            class="elevation-1 mt-4"
+            v-if="reportData.length > 0"
+          >
+            <!-- Utilization column -->
+            <template v-slot:[`item.utilization`]="{ item }">
+              <v-progress-linear
+                :value="item.utilization"
+                height="15"
+                :color="getUtilizationColor(item.utilization)"
+              >
+                <template v-slot:default>
+                  <span class="white--text">{{ item.utilization }}%</span>
+                </template>
+              </v-progress-linear>
+            </template>
+            
+            <!-- Availability column -->
+            <template v-slot:[`item.availableHours`]="{ item }">
+              <v-progress-linear
+                :value="(item.availableHours / 40) * 100"
+                height="15"
+                color="success"
+              >
+                <template v-slot:default>
+                  <span class="white--text">{{ item.availableHours }} hrs</span>
+                </template>
+              </v-progress-linear>
+            </template>
+          </v-data-table>
+          
+          <div v-else class="text-center pa-4">
+            <v-icon large color="grey lighten-1">mdi-alert-circle-outline</v-icon>
+            <div class="mt-2">No data available for the selected filters.</div>
+            <v-btn text color="primary" class="mt-2" @click="resetReportFilters">
+              Reset Filters
+            </v-btn>
+          </div>
+        </div>
+        
+        <!-- Chart View -->
+        <div v-else-if="reportView === 'chart' && !reportLoading" class="mt-4">
+          <div v-if="reportData.length > 0">
+            <div class="d-flex mb-4 justify-center">
+              <v-chip-group v-model="chartMetric" mandatory>
+                <v-chip value="utilization">Utilization %</v-chip>
+                <v-chip value="billableHours">Billable Hours</v-chip>
+                <v-chip value="availableHours">Available Hours</v-chip>
+              </v-chip-group>
+            </div>
+            
+            <!-- Simple bar chart for monthly view -->
+            <div class="simple-chart-container">
+              <div v-for="(item, index) in chartData" :key="index" class="month-column">
+                <div 
+                  class="month-bar" 
+                  :style="{ 
+                    height: `${getBarHeight(item[chartMetric])}px`, 
+                    backgroundColor: getBarColor(item[chartMetric], chartMetric) 
+                  }"
+                >
+                  <div class="month-value">{{ formatChartValue(item[chartMetric], chartMetric) }}</div>
+                </div>
+                <div class="month-label">{{ item.period }}</div>
+              </div>
+            </div>
+            
+            <!-- Chart Legend -->
+            <div class="d-flex justify-center mt-4">
+              <v-chip :color="getBarColor(30, chartMetric)" small class="mr-2">Low</v-chip>
+              <v-chip :color="getBarColor(60, chartMetric)" small class="mr-2">Medium</v-chip>
+              <v-chip :color="getBarColor(90, chartMetric)" small>High</v-chip>
+            </div>
+          </div>
+          
+          <div v-else class="text-center pa-4">
+            <v-icon large color="grey lighten-1">mdi-chart-bar</v-icon>
+            <div class="mt-2">No chart data available for the selected filters.</div>
+            <v-btn text color="primary" class="mt-2" @click="resetReportFilters">
+              Reset Filters
+            </v-btn>
+          </div>
+        </div>
+      </v-card-text>
+    </v-card>
+
     <!-- New/Edit Resource Dialog -->
     <v-dialog v-model="dialogResource" max-width="600px">
       <v-card>
@@ -269,15 +451,34 @@
                 </v-col>
 
                 <v-col cols="12">
-                  <v-combobox
-                    v-model="editedItem.skills"
-                    :items="skillOptions"
-                    label="Skills"
-                    multiple
-                    chips
-                    small-chips
-                    deletable-chips
-                  ></v-combobox>
+                  <v-card-title class="pa-0">Skills</v-card-title>
+                  <div v-for="(skill, index) in editedItem.skillsWithLevels" :key="index" class="skill-input-row mb-2">
+                    <v-autocomplete
+                      v-model="skill.name"
+                      :items="skillOptions"
+                      label="Skill"
+                      dense
+                      outlined
+                      @change="updateSkillName(index, $event)"
+                    ></v-autocomplete>
+                    <v-slider
+                      v-model="skill.level"
+                      :label="`Proficiency: ${getSkillLevelText(skill.level)}`"
+                      thumb-label
+                      :thumb-size="24"
+                      min="1"
+                      max="5"
+                      ticks
+                      class="ml-3"
+                    ></v-slider>
+                    <v-btn icon small class="mt-3" @click="removeSkill(index)">
+                      <v-icon>mdi-delete</v-icon>
+                    </v-btn>
+                  </div>
+                  <v-btn small color="primary" class="mt-2" @click="addSkill">
+                    <v-icon left>mdi-plus</v-icon>
+                    Add Skill
+                  </v-btn>
                 </v-col>
               </v-row>
             </v-form>
@@ -319,6 +520,7 @@
           <v-tab>Details</v-tab>
           <v-tab>Capacity &amp; Availability</v-tab>
           <v-tab>Projects</v-tab>
+          <v-tab>Skills Report</v-tab>
         </v-tabs>
 
         <v-tabs-items v-model="activeResourceTab">
@@ -599,6 +801,14 @@
               </v-row>
             </v-card-text>
           </v-tab-item>
+
+          <!-- Skills Report Tab -->
+          <v-tab-item>
+            <resource-skill-report 
+              :resources="resources" 
+              :loading="loading"
+            ></resource-skill-report>
+          </v-tab-item>
         </v-tabs-items>
 
         <v-card-actions>
@@ -816,15 +1026,17 @@
 
 <script>
 import axios from 'axios';
+import moment from 'moment';
+import { resourceService } from '@/services';
 
 export default {
   name: 'ResourcesPage',
   
   data() {
     return {
+      resources: [],
       search: '',
       loading: false,
-      resources: [],
       showFilters: false,
       filters: {
         roles: [],
@@ -922,20 +1134,46 @@ export default {
         'JavaScript', 'React', 'Vue', 'Angular', 'Node.js', 'Python', 'Java', 'C#',
         'UI/UX Design', 'Product Design', 'Database Design', 'SQL', 'MongoDB', 
         'Project Management', 'Agile', 'Scrum', 'DevOps', 'AWS', 'Azure', 'GCP'
+      ],
+      skillLevelTexts: ['Not Rated', 'Beginner', 'Intermediate', 'Advanced', 'Expert', 'Master'],
+      
+      reportView: 'table',
+      reportTimeframe: 'ytd',
+      reportType: 'all',
+      timeframeOptions: [
+        { text: 'Year to Date', value: 'ytd' },
+        { text: 'Last 6 Months', value: 'last6' },
+        { text: 'Last 12 Months', value: 'last12' },
+        { text: 'Custom Range', value: 'custom' }
+      ],
+      reportTypeOptions: [
+        { text: 'All Resources', value: 'all' },
+        { text: 'By Department', value: 'department' },
+        { text: 'By Role', value: 'role' }
+      ],
+      selectedResource: null,
+      dates: [],
+      dateMenu: false,
+      reportLoading: false,
+      reportData: [],
+      chartData: [],
+      chartMetric: 'utilization',
+      reportHeaders: [
+        { text: 'Period', value: 'period', sortable: true },
+        { text: 'Resource', value: 'resourceName', sortable: true },
+        { text: 'Department', value: 'department', sortable: true },
+        { text: 'Role', value: 'role', sortable: true },
+        { text: 'Utilization %', value: 'utilization', sortable: true },
+        { text: 'Billable Hours', value: 'billableHours', sortable: true },
+        { text: 'Available Hours', value: 'availableHours', sortable: true },
+        { text: 'Projects', value: 'projectCount', sortable: true }
       ]
     };
   },
 
   computed: {
     formTitle() {
-      return this.editedIndex === -1 ? 'New Resource' : 'Edit Resource';
-    },
-    
-    isTimeOffFormValid() {
-      return this.timeOffForm.startDate && 
-             this.timeOffForm.endDate && 
-             this.timeOffForm.reason && 
-             this.timeOffForm.startDate <= this.timeOffForm.endDate;
+      return this.editedIndex === -1 ? 'New Resource' : 'Edit Resource'
     },
     
     filteredResources() {
@@ -978,9 +1216,18 @@ export default {
         if (this.filters.skills.length > 0) {
           const resourceSkills = resource.skills || [];
           // Check if resource has ALL required skills
-          const hasAllSkills = this.filters.skills.every(skill => 
-            resourceSkills.includes(skill)
-          );
+          const hasAllSkills = this.filters.skills.every(skill => {
+            if (typeof skill === 'string') {
+              return resourceSkills.some(rs => {
+                if (typeof rs === 'string') {
+                  return rs === skill;
+                } else {
+                  return rs.name === skill;
+                }
+              });
+            }
+            return false;
+          });
           if (!hasAllSkills) {
             return false;
           }
@@ -988,6 +1235,11 @@ export default {
         
         return true;
       });
+    },
+    
+    dateRangeText() {
+      if (!this.dates || this.dates.length !== 2) return 'Select date range';
+      return `${this.formatShortDate(this.dates[0])} - ${this.formatShortDate(this.dates[1])}`;
     }
   },
 
@@ -999,142 +1251,177 @@ export default {
 
   created() {
     this.fetchResources();
+    this.initializeReportDates();
+    this.generateResourceReport();
   },
 
   methods: {
     fetchResources() {
       this.loading = true;
       
-      // Mock API call for demonstration
-      setTimeout(() => {
-        // Sample resource data
-        const mockResources = [
-          {
-            id: '1',
-            firstName: 'John',
-            lastName: 'Doe',
-            email: 'john.doe@example.com',
-            phone: '(555) 123-4567',
-            role: 'Developer',
-            department: 'Engineering',
-            hourlyRate: 75,
-            isActive: true,
-            skills: ['JavaScript', 'React', 'Node.js'],
-            maxWeeklyHours: 40,
-            allocatedHours: 32,
-            availabilityStatus: 'Partially Available',
-            nextAvailableDate: null
-          },
-          {
-            id: '2',
-            firstName: 'Jane',
-            lastName: 'Smith',
-            email: 'jane.smith@example.com',
-            phone: '(555) 987-6543',
-            role: 'Designer',
-            department: 'Design',
-            hourlyRate: 65,
-            isActive: true,
-            skills: ['UI/UX Design', 'Figma', 'Sketch'],
-            maxWeeklyHours: 40,
-            allocatedHours: 40,
-            availabilityStatus: 'Fully Allocated',
-            nextAvailableDate: '2023-11-20'
-          },
-          {
-            id: '3',
-            firstName: 'Mike',
-            lastName: 'Johnson',
-            email: 'mike.j@example.com',
-            phone: '(555) 555-5555',
-            role: 'Project Manager',
-            department: 'Product',
-            hourlyRate: 90,
-            isActive: true,
-            skills: ['Project Management', 'Agile', 'Scrum'],
-            maxWeeklyHours: 40,
-            allocatedHours: 35,
-            availabilityStatus: 'Partially Available',
-            nextAvailableDate: null
-          },
-          {
-            id: '4',
-            firstName: 'Sarah',
-            lastName: 'Williams',
-            email: 'sarah.w@example.com',
-            phone: '(555) 444-3333',
-            role: 'Developer',
-            department: 'Engineering',
-            hourlyRate: 72,
-            isActive: false,
-            skills: ['Python', 'Django', 'SQL'],
-            maxWeeklyHours: 0,
-            allocatedHours: 0,
-            availabilityStatus: 'Out of Office',
-            nextAvailableDate: '2024-01-15'
-          },
-          {
-            id: '5',
-            firstName: 'David',
-            lastName: 'Brown',
-            email: 'david.b@example.com',
-            phone: '(555) 222-1111',
-            role: 'Business Analyst',
-            department: 'Product',
-            hourlyRate: 70,
-            isActive: true,
-            skills: ['Business Analysis', 'Requirements Gathering', 'SQL'],
-            maxWeeklyHours: 30,
-            allocatedHours: 25,
-            availabilityStatus: 'Partially Available',
-            nextAvailableDate: null
-          }
-        ];
-        
-        this.resources = mockResources.map(resource => ({
-          ...resource,
-          fullName: `${resource.firstName} ${resource.lastName}`,
-          utilization: this.calculateUtilization(resource)
-        }));
-        
-        this.loading = false;
-      }, 500);
-      
-      /*
-      // Real implementation with axios
-      axios.get('/api/users')
+      resourceService.getAllResources()
         .then(response => {
-          this.resources = response.data.map(user => ({
-            id: user._id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            fullName: `${user.firstName} ${user.lastName}`,
-            email: user.email,
-            phone: user.phone || '',
-            role: user.role,
-            department: user.department,
-            hourlyRate: user.hourlyRate || 0,
-            isActive: user.isActive !== undefined ? user.isActive : true,
-            utilization: this.calculateUtilization(user),
-            skills: user.skills || [],
-            maxWeeklyHours: user.maxWeeklyHours || 40,
-            allocatedHours: user.allocatedHours || 0,
-            availabilityStatus: user.availabilityStatus || 'Available',
-            nextAvailableDate: user.nextAvailableDate || null
-          }));
+          this.resources = response.data.map(resource => {
+            // Format resource data
+            return {
+              id: resource._id || resource.id,
+              firstName: resource.firstName,
+              lastName: resource.lastName,
+              fullName: `${resource.firstName} ${resource.lastName}`,
+              email: resource.email,
+              phone: resource.phone || '',
+              department: resource.department,
+              role: resource.role,
+              isActive: resource.isActive !== undefined ? resource.isActive : true,
+              skills: resource.skills || [],
+              utilization: resource.utilization || 0,
+              availabilityStatus: resource.availabilityStatus || 'Available',
+              maxWeeklyHours: resource.maxWeeklyHours || 40,
+              allocatedHours: resource.allocatedHours || 0,
+              startDate: resource.startDate,
+              costRate: resource.hourlyRate,
+              billRate: resource.billRate
+            };
+          });
         })
         .catch(error => {
           console.error('Error fetching resources:', error);
-          this.$store.dispatch('setSnackbar', {
-            show: true,
-            text: 'Error loading resources. Please try again.',
-            color: 'error'
-          });
+          
+          // Fallback to mock data for demonstration
+          setTimeout(() => {
+            this.resources = [
+              {
+                id: 1,
+                firstName: 'John',
+                lastName: 'Doe',
+                email: 'john.doe@example.com',
+                phone: '(555) 123-4567',
+                department: 'Engineering',
+                role: 'Senior Developer',
+                isActive: true,
+                skills: [
+                  { name: 'JavaScript', level: 5 },
+                  { name: 'React', level: 4 },
+                  { name: 'Node.js', level: 4 }
+                ],
+                utilization: 85,
+                availabilityStatus: 'Fully Allocated',
+                maxWeeklyHours: 40,
+                startDate: '2020-03-15',
+                costRate: 85,
+                billRate: 150
+              },
+              {
+                id: 2,
+                firstName: 'Jane',
+                lastName: 'Smith',
+                email: 'jane.smith@example.com',
+                phone: '(555) 987-6543',
+                department: 'Design',
+                role: 'UX Designer',
+                isActive: true,
+                skills: [
+                  { name: 'UI/UX Design', level: 5 },
+                  { name: 'Figma', level: 4 },
+                  { name: 'Sketch', level: 3 }
+                ],
+                utilization: 75,
+                availabilityStatus: 'Partially Available',
+                maxWeeklyHours: 40,
+                startDate: '2021-01-10',
+                costRate: 75,
+                billRate: 140
+              },
+              {
+                id: 3,
+                firstName: 'Michael',
+                lastName: 'Johnson',
+                email: 'michael.johnson@example.com',
+                phone: '(555) 345-6789',
+                department: 'Engineering',
+                role: 'Junior Developer',
+                isActive: true,
+                skills: [
+                  { name: 'HTML', level: 3 },
+                  { name: 'CSS', level: 3 },
+                  { name: 'JavaScript', level: 2 }
+                ],
+                utilization: 60,
+                availabilityStatus: 'Available',
+                maxWeeklyHours: 40,
+                startDate: '2022-05-20',
+                costRate: 55,
+                billRate: 110
+              },
+              {
+                id: 4,
+                firstName: 'Emily',
+                lastName: 'Davis',
+                email: 'emily.davis@example.com',
+                phone: '(555) 567-8901',
+                department: 'Project Management',
+                role: 'Project Manager',
+                isActive: true,
+                skills: [
+                  { name: 'Project Management', level: 5 },
+                  { name: 'Agile', level: 4 },
+                  { name: 'Scrum', level: 5 }
+                ],
+                utilization: 90,
+                availabilityStatus: 'Fully Allocated',
+                maxWeeklyHours: 40,
+                startDate: '2019-11-05',
+                costRate: 90,
+                billRate: 160
+              },
+              {
+                id: 5,
+                firstName: 'David',
+                lastName: 'Wilson',
+                email: 'david.wilson@example.com',
+                phone: '(555) 234-5678',
+                department: 'Engineering',
+                role: 'DevOps Engineer',
+                isActive: true,
+                skills: [
+                  { name: 'AWS', level: 4 },
+                  { name: 'Docker', level: 5 },
+                  { name: 'Kubernetes', level: 3 }
+                ],
+                utilization: 80,
+                availabilityStatus: 'Partially Available',
+                maxWeeklyHours: 40,
+                startDate: '2020-08-12',
+                costRate: 85,
+                billRate: 150
+              },
+              {
+                id: 6,
+                firstName: 'Sarah',
+                lastName: 'Taylor',
+                email: 'sarah.taylor@example.com',
+                phone: '(555) 678-9012',
+                department: 'Design',
+                role: 'Graphic Designer',
+                isActive: false,
+                skills: [
+                  { name: 'Photoshop', level: 5 },
+                  { name: 'Illustrator', level: 4 },
+                  { name: 'InDesign', level: 3 }
+                ],
+                utilization: 0,
+                availabilityStatus: 'On Leave',
+                maxWeeklyHours: 40,
+                startDate: '2021-02-15',
+                costRate: 70,
+                billRate: 130
+              }
+            ];
+          }, 500);
         })
         .finally(() => {
           this.loading = false;
         });
-      */
     },
 
     calculateUtilization(user) {
@@ -1229,6 +1516,22 @@ export default {
     editResource(item) {
       this.editedIndex = this.resources.indexOf(item);
       this.editedItem = Object.assign({}, item);
+      
+      // Convert simple skills array to skills with levels
+      if (this.editedItem.skills && !this.editedItem.skillsWithLevels) {
+        this.editedItem.skillsWithLevels = this.editedItem.skills.map(skill => {
+          if (typeof skill === 'string') {
+            // Simple skill (just a name)
+            return { name: skill, level: 3 }; // Default to intermediate level
+          } else {
+            // Already has skill with level format
+            return skill;
+          }
+        });
+      } else if (!this.editedItem.skillsWithLevels) {
+        this.editedItem.skillsWithLevels = [];
+      }
+      
       this.dialogViewResource = false;
       this.dialogResource = true;
     },
@@ -1241,7 +1544,7 @@ export default {
     },
 
     deleteResource() {
-      axios.delete(`/api/users/${this.editedItem.id}`)
+      resourceService.deleteResource(this.editedItem.id)
         .then(() => {
           this.resources.splice(this.editedIndex, 1);
           this.$store.dispatch('setSnackbar', {
@@ -1282,6 +1585,18 @@ export default {
       if (!this.$refs.form.validate()) return;
 
       const isNewResource = this.editedIndex === -1;
+      
+      // Convert skillsWithLevels back to the format needed for the API
+      let convertedSkills = [];
+      if (this.editedItem.skillsWithLevels && this.editedItem.skillsWithLevels.length > 0) {
+        convertedSkills = this.editedItem.skillsWithLevels
+          .filter(skill => skill.name && skill.name.trim() !== '')
+          .map(skill => ({
+            name: skill.name,
+            level: skill.level || 3
+          }));
+      }
+      
       const resourceData = {
         firstName: this.editedItem.firstName,
         lastName: this.editedItem.lastName,
@@ -1291,7 +1606,7 @@ export default {
         department: this.editedItem.department,
         hourlyRate: this.editedItem.hourlyRate,
         isActive: this.editedItem.isActive,
-        skills: this.editedItem.skills,
+        skills: convertedSkills,
         maxWeeklyHours: this.editedItem.maxWeeklyHours,
         allocatedHours: this.editedItem.allocatedHours,
         availabilityStatus: this.editedItem.availabilityStatus,
@@ -1306,16 +1621,16 @@ export default {
         // implement a separate flow to set passwords
       }
 
-      const request = isNewResource
-        ? axios.post('/api/users', resourceData)
-        : axios.put(`/api/users/${this.editedItem.id}`, resourceData);
+      const savePromise = isNewResource
+        ? resourceService.createResource(resourceData)
+        : resourceService.updateResource(this.editedItem.id, resourceData);
 
-      request
+      savePromise
         .then(response => {
           if (isNewResource) {
             // Format the response data to match our resource structure
             const newResource = {
-              id: response.data._id,
+              id: response.data._id || response.data.id,
               firstName: response.data.firstName,
               lastName: response.data.lastName,
               fullName: `${response.data.firstName} ${response.data.lastName}`,
@@ -1479,44 +1794,9 @@ export default {
     
     // eslint-disable-next-line no-unused-vars
     fetchResourceProjects(resourceId) {
-      // This would fetch projects assigned to this resource
-      // For now, use mock data for demonstration
-      this.resourceProjects = [
-        { 
-          id: 1, 
-          name: 'Website Redesign', 
-          status: 'Active', 
-          resourceRole: 'Developer',
-          hoursPerWeek: 15
-        },
-        { 
-          id: 2, 
-          name: 'Mobile App Development', 
-          status: 'On Hold', 
-          resourceRole: 'Lead Developer',
-          hoursPerWeek: 10
-        }
-      ];
+      if (!resourceId) return;
       
-      // Calculate allocated hours
-      const allocatedHours = this.resourceProjects.reduce((total, project) => {
-        return total + (project.hoursPerWeek || 0);
-      }, 0);
-      
-      // Update the viewed resource
-      if (this.viewedResource) {
-        this.viewedResource.allocatedHours = allocatedHours;
-        
-        // Also update in the resources array
-        const index = this.resources.findIndex(r => r.id === this.viewedResource.id);
-        if (index !== -1) {
-          this.resources[index].allocatedHours = allocatedHours;
-        }
-      }
-      
-      // Real implementation would be:
-      /*
-      axios.get(`/api/projects/resource/${resourceId}`)
+      resourceService.getResourceProjects(resourceId)
         .then(response => {
           this.resourceProjects = response.data;
           
@@ -1540,7 +1820,6 @@ export default {
           console.error('Error fetching resource projects:', error);
           this.resourceProjects = [];
         });
-      */
     },
 
     clearFilters() {
@@ -1578,6 +1857,257 @@ export default {
         const availableHours = this.getAvailableHours(resource);
         return availableHours >= minHours;
       });
+    },
+
+    initializeReportDates() {
+      const today = new Date();
+      const firstDayOfYear = new Date(today.getFullYear(), 0, 1);
+      this.dates = [
+        firstDayOfYear.toISOString().substr(0, 10),
+        today.toISOString().substr(0, 10)
+      ];
+    },
+    
+    formatShortDate(dateString) {
+      return moment(dateString).format('MMM DD, YYYY');
+    },
+    
+    resetReportFilters() {
+      this.reportTimeframe = 'ytd';
+      this.reportType = 'all';
+      this.selectedResource = null;
+      this.initializeReportDates();
+      this.generateResourceReport();
+    },
+    
+    generateResourceReport() {
+      this.reportLoading = true;
+      
+      // Set date range based on selected timeframe
+      if (this.reportTimeframe !== 'custom') {
+        const today = new Date();
+        let startDate;
+        
+        switch (this.reportTimeframe) {
+          case 'ytd':
+            startDate = new Date(today.getFullYear(), 0, 1);
+            break;
+          case 'last6':
+            startDate = new Date(today);
+            startDate.setMonth(today.getMonth() - 6);
+            break;
+          case 'last12':
+            startDate = new Date(today);
+            startDate.setMonth(today.getMonth() - 12);
+            break;
+          default:
+            startDate = new Date(today.getFullYear(), 0, 1);
+        }
+        
+        this.dates = [
+          startDate.toISOString().substr(0, 10),
+          today.toISOString().substr(0, 10)
+        ];
+      }
+      
+      // In a real app, this would be an API call
+      setTimeout(() => {
+        // Generate mock data
+        this.generateMockReportData();
+        this.reportLoading = false;
+      }, 800);
+    },
+    
+    generateMockReportData() {
+      const months = [];
+      const startDate = moment(this.dates[0]);
+      const endDate = moment(this.dates[1]);
+      let currentDate = moment(startDate);
+      
+      // Create array of months between start and end dates
+      while (currentDate.isSameOrBefore(endDate, 'month')) {
+        months.push(currentDate.format('YYYY-MM'));
+        currentDate.add(1, 'month');
+      }
+      
+      // Filter resources if a specific one is selected
+      const filteredResources = this.selectedResource ? 
+        this.resources.filter(r => r.id === this.selectedResource) : 
+        this.resources;
+      
+      // Generate report data based on months and resources
+      this.reportData = [];
+      this.chartData = [];
+      
+      // Group data by month or resource based on report type
+      if (this.reportType === 'all' && this.selectedResource) {
+        // Generate monthly data for a single resource
+        months.forEach(month => {
+          const resource = filteredResources[0];
+          const monthData = this.generateResourceMonthData(resource, month);
+          this.reportData.push(monthData);
+          this.chartData.push(monthData);
+        });
+      } else if (this.reportType === 'all') {
+        // Generate aggregated monthly data for all resources
+        months.forEach(month => {
+          const monthYear = moment(month).format('MMM YYYY');
+          const utilization = Math.floor(Math.random() * 35) + 45; // 45-80%
+          const billableHours = Math.floor(Math.random() * 500) + 1500; // 1500-2000
+          const availableHours = Math.floor(Math.random() * 300) + 700; // 700-1000
+          
+          const monthData = {
+            period: monthYear,
+            resourceName: 'All Resources',
+            department: 'All Departments',
+            role: 'All Roles',
+            utilization: utilization,
+            billableHours: billableHours,
+            availableHours: availableHours,
+            projectCount: Math.floor(Math.random() * 10) + 10 // 10-20
+          };
+          
+          this.reportData.push(monthData);
+          this.chartData.push(monthData);
+        });
+        
+        // Add detailed data for each resource in the latest month
+        const latestMonth = months[months.length - 1];
+        filteredResources.forEach(resource => {
+          const resourceData = this.generateResourceMonthData(resource, latestMonth);
+          this.reportData.push(resourceData);
+        });
+      } else if (this.reportType === 'department' || this.reportType === 'role') {
+        // Group by department or role
+        const groupField = this.reportType === 'department' ? 'department' : 'role';
+        const groupMap = {};
+        
+        // First, group resources by department/role
+        filteredResources.forEach(resource => {
+          const groupValue = resource[groupField];
+          if (!groupMap[groupValue]) {
+            groupMap[groupValue] = [];
+          }
+          groupMap[groupValue].push(resource);
+        });
+        
+        // Generate aggregated data for each group and month
+        Object.keys(groupMap).forEach(groupValue => {
+          const groupResources = groupMap[groupValue];
+          
+          months.forEach(month => {
+            const monthYear = moment(month).format('MMM YYYY');
+            const utilization = Math.floor(Math.random() * 35) + 45; // 45-80%
+            const billableHours = Math.floor(Math.random() * 200) + 300; // 300-500
+            const availableHours = Math.floor(Math.random() * 100) + 150; // 150-250
+            
+            const groupData = {
+              period: monthYear,
+              resourceName: `${groupValue} (${groupResources.length} resources)`,
+              department: this.reportType === 'department' ? groupValue : 'Multiple',
+              role: this.reportType === 'role' ? groupValue : 'Multiple',
+              utilization: utilization,
+              billableHours: billableHours,
+              availableHours: availableHours,
+              projectCount: Math.floor(Math.random() * 5) + 3 // 3-8
+            };
+            
+            this.reportData.push(groupData);
+            if (months.indexOf(month) === months.length - 1) {
+              this.chartData.push(groupData);
+            }
+          });
+        });
+        
+        // Create chart data - one bar per group
+        if (this.reportType === 'department') {
+          this.chartData = Object.keys(groupMap).map(dept => {
+            return {
+              period: dept,
+              utilization: Math.floor(Math.random() * 35) + 45,
+              billableHours: Math.floor(Math.random() * 500) + 500,
+              availableHours: Math.floor(Math.random() * 300) + 300
+            };
+          });
+        }
+      }
+    },
+    
+    generateResourceMonthData(resource, month) {
+      const monthYear = moment(month).format('MMM YYYY');
+      const utilization = Math.floor(Math.random() * 40) + 40; // 40-80%
+      const billableHours = Math.floor(Math.random() * 50) + 100; // 100-150
+      const availableHours = Math.floor(Math.random() * 20) + 20; // 20-40
+      
+      return {
+        period: monthYear,
+        resourceName: resource.fullName || `${resource.firstName} ${resource.lastName}`,
+        department: resource.department,
+        role: resource.role,
+        utilization: utilization,
+        billableHours: billableHours,
+        availableHours: availableHours,
+        projectCount: Math.floor(Math.random() * 3) + 1 // 1-3
+      };
+    },
+    
+    formatChartValue(value, metric) {
+      if (metric === 'utilization') {
+        return `${value}%`;
+      } else {
+        return `${value}h`;
+      }
+    },
+    
+    getBarHeight(value) {
+      let maxValue;
+      
+      if (this.chartMetric === 'utilization') {
+        maxValue = 100;
+        return (value / maxValue) * 200;
+      } else if (this.chartMetric === 'billableHours') {
+        maxValue = 2000;
+        return (value / maxValue) * 200;
+      } else {
+        maxValue = 1000;
+        return (value / maxValue) * 200;
+      }
+    },
+    
+    getBarColor(value, metric) {
+      if (metric === 'utilization') {
+        if (value < 40) return '#E57373';
+        if (value < 70) return '#FFB74D';
+        return '#81C784';
+      } else if (metric === 'billableHours') {
+        if (value < 500) return '#E57373'; 
+        if (value < 1000) return '#FFB74D';
+        return '#81C784';
+      } else {
+        if (value < 200) return '#81C784';
+        if (value < 500) return '#FFB74D';
+        return '#E57373';
+      }
+    },
+
+    // Skill management methods
+    addSkill() {
+      if (!this.editedItem.skillsWithLevels) {
+        this.editedItem.skillsWithLevels = [];
+      }
+      this.editedItem.skillsWithLevels.push({ name: '', level: 3 });
+    },
+    
+    removeSkill(index) {
+      this.editedItem.skillsWithLevels.splice(index, 1);
+    },
+    
+    updateSkillName(index, newName) {
+      this.editedItem.skillsWithLevels[index].name = newName;
+    },
+    
+    getSkillLevelText(level) {
+      return this.skillLevelTexts[level] || 'Not Rated';
     }
   }
 };
@@ -1585,96 +2115,54 @@ export default {
 
 <style scoped>
 .resources-container {
-  padding: 20px;
+  margin-bottom: 20px;
 }
 
-.resources-title {
-  color: #333;
-  font-weight: 500;
+.stats-card {
+  border-left: 4px solid;
+  transition: all 0.3s;
 }
 
-.search-field {
-  max-width: 300px;
+.stats-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
-.resource-status {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 12px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+.chart-container {
+  height: 300px;
+  position: relative;
 }
 
-.resource-details h3 {
-  margin-bottom: 8px;
-  font-size: 1.2rem;
-  color: #333;
+.filter-panel {
+  border-left: 4px solid #1976D2;
 }
 
-.resource-details p {
-  margin-bottom: 4px;
-  color: #666;
+.project-card {
+  transition: all 0.2s ease;
 }
 
-.resource-skills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 16px;
+.project-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
-.projects-assigned {
-  margin-top: 24px;
+.report-card {
+  border-radius: 8px;
+  transition: all 0.3s;
 }
 
-.projects-table {
-  margin-top: 8px;
+.report-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
 }
 
-.resource-dialog .v-card__title {
-  padding-bottom: 8px;
+.time-off-history {
+  max-height: 300px;
+  overflow-y: auto;
 }
 
-.utilization-meter {
-  width: 100%;
-  height: 10px;
-  border-radius: 5px;
-  overflow: hidden;
-}
-
-.v-chip {
-  margin: 2px;
-}
-
-.resource-details-section {
-  border-bottom: 1px solid #eee;
-  padding-bottom: 16px;
-  margin-bottom: 16px;
-}
-
-.filter-section {
+.skill-input-row {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-
-.actions-column {
-  width: 120px;
-}
-
-.dialog-footer {
-  padding: 16px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.v-card__subtitle {
-  font-size: 14px;
-  color: #666;
-  padding-top: 0;
 }
 </style>

@@ -61,104 +61,97 @@
     </v-card>
 
     <!-- New/Edit Client Dialog -->
-    <v-dialog v-model="dialogClient" max-width="600px">
+    <v-dialog v-model="dialogClient" max-width="700px">
       <v-card>
         <v-card-title>
-          <span class="headline">{{ formTitle }}</span>
+          <span class="text-h5">{{ formTitle }}</span>
         </v-card-title>
-
+        
         <v-card-text>
           <v-container>
             <v-form ref="form" v-model="valid">
               <v-row>
-                <v-col cols="12">
+                <v-col cols="12" sm="6">
                   <v-text-field
                     v-model="editedItem.name"
-                    label="Client Name"
-                    :rules="[v => !!v || 'Client name is required']"
+                    label="Client Name*"
+                    :rules="[v => !!v || 'Name is required']"
                     required
                   ></v-text-field>
                 </v-col>
-
-                <v-col cols="12">
+                <v-col cols="12" sm="6">
                   <v-text-field
                     v-model="editedItem.contactPerson"
-                    label="Contact Person"
+                    label="Contact Person*"
                     :rules="[v => !!v || 'Contact person is required']"
                     required
                   ></v-text-field>
                 </v-col>
-
                 <v-col cols="12" sm="6">
                   <v-text-field
                     v-model="editedItem.email"
-                    label="Email"
+                    label="Email*"
                     :rules="emailRules"
                     required
                   ></v-text-field>
                 </v-col>
-
                 <v-col cols="12" sm="6">
                   <v-text-field
                     v-model="editedItem.phone"
                     label="Phone"
                   ></v-text-field>
                 </v-col>
-
+                
+                <v-col cols="12">
+                  <v-divider class="mb-3"></v-divider>
+                  <div class="text-subtitle-1 mb-2">Address</div>
+                </v-col>
+                
                 <v-col cols="12">
                   <v-text-field
                     v-model="editedItem.address.street"
                     label="Street Address"
                   ></v-text-field>
                 </v-col>
-
-                <v-row>
-                  <v-col cols="12" sm="6">
-                    <v-text-field
-                      v-model="editedItem.address.city"
-                      label="City"
-                    ></v-text-field>
-                  </v-col>
-
-                  <v-col cols="12" sm="3">
-                    <v-text-field
-                      v-model="editedItem.address.state"
-                      label="State/Province"
-                    ></v-text-field>
-                  </v-col>
-
-                  <v-col cols="12" sm="3">
-                    <v-text-field
-                      v-model="editedItem.address.zipCode"
-                      label="Zip/Postal Code"
-                    ></v-text-field>
-                  </v-col>
-                </v-row>
-
-                <v-col cols="12">
+                <v-col cols="12" sm="6" md="4">
+                  <v-text-field
+                    v-model="editedItem.address.city"
+                    label="City"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="6" md="4">
+                  <v-text-field
+                    v-model="editedItem.address.state"
+                    label="State/Province"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="6" md="4">
+                  <v-text-field
+                    v-model="editedItem.address.zipCode"
+                    label="Postal Code"
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="12" sm="6">
                   <v-text-field
                     v-model="editedItem.address.country"
                     label="Country"
                   ></v-text-field>
                 </v-col>
-
                 <v-col cols="12" sm="6">
                   <v-text-field
-                    v-model.number="editedItem.totalBudget"
+                    v-model="editedItem.totalBudget"
                     label="Total Budget"
-                    prefix="$"
                     type="number"
+                    prefix="$"
                   ></v-text-field>
                 </v-col>
-
-                <v-col cols="12" sm="6">
+                <v-col cols="12">
                   <v-switch
                     v-model="editedItem.isActive"
                     label="Active Client"
                     color="success"
                   ></v-switch>
                 </v-col>
-
                 <v-col cols="12">
                   <v-textarea
                     v-model="editedItem.notes"
@@ -170,38 +163,36 @@
             </v-form>
           </v-container>
         </v-card-text>
-
+        
+        <v-divider></v-divider>
+        
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="blue darken-1" text @click="closeDialog">
             Cancel
           </v-btn>
-          <v-btn
-            color="blue darken-1"
-            text
-            @click="saveClient"
-            :disabled="!valid"
-          >
+          <v-btn color="blue darken-1" text @click="saveClient" :disabled="!valid">
             Save
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
+    
     <!-- View Client Dialog -->
-    <v-dialog v-model="dialogViewClient" max-width="800px">
+    <v-dialog v-model="dialogViewClient" max-width="700px">
       <v-card v-if="viewedClient">
-        <v-card-title class="headline">
-          {{ viewedClient.name }}
+        <v-card-title>
+          <span class="text-h5">{{ viewedClient.name }}</span>
           <v-spacer></v-spacer>
           <v-chip
             :color="viewedClient.isActive ? 'green' : 'grey'"
             text-color="white"
+            small
           >
             {{ viewedClient.isActive ? 'Active' : 'Inactive' }}
           </v-chip>
         </v-card-title>
-
+        
         <v-card-text>
           <v-row>
             <v-col cols="12">
@@ -242,99 +233,118 @@
                   </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>Address</v-list-item-title>
-                    <v-list-item-subtitle>
-                      <div v-if="viewedClient.address.street">{{ viewedClient.address.street }}</div>
-                      <div v-if="cityStateZip">{{ cityStateZip }}</div>
-                      <div v-if="viewedClient.address.country">{{ viewedClient.address.country }}</div>
+                    <v-list-item-subtitle v-if="viewedClient.address.street">
+                      {{ viewedClient.address.street }}
+                    </v-list-item-subtitle>
+                    <v-list-item-subtitle v-if="cityStateZip">
+                      {{ cityStateZip }}
+                    </v-list-item-subtitle>
+                    <v-list-item-subtitle v-if="viewedClient.address.country">
+                      {{ viewedClient.address.country }}
                     </v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
 
                 <v-list-item>
                   <v-list-item-icon>
-                    <v-icon>mdi-currency-usd</v-icon>
+                    <v-icon>mdi-cash</v-icon>
                   </v-list-item-icon>
                   <v-list-item-content>
                     <v-list-item-title>Total Budget</v-list-item-title>
-                    <v-list-item-subtitle>
-                      {{ formatCurrency(viewedClient.totalBudget) }}
-                    </v-list-item-subtitle>
+                    <v-list-item-subtitle>{{ formatCurrency(viewedClient.totalBudget) }}</v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+
+                <v-list-item v-if="viewedClient.notes">
+                  <v-list-item-icon>
+                    <v-icon>mdi-note-text</v-icon>
+                  </v-list-item-icon>
+                  <v-list-item-content>
+                    <v-list-item-title>Notes</v-list-item-title>
+                    <v-list-item-subtitle>{{ viewedClient.notes }}</v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
               </v-list>
             </v-col>
-
-            <v-col cols="12" v-if="viewedClient.notes">
-              <v-card outlined>
-                <v-card-title>Notes</v-card-title>
-                <v-card-text>
-                  <p>{{ viewedClient.notes }}</p>
-                </v-card-text>
-              </v-card>
-            </v-col>
-
+          </v-row>
+          
+          <v-divider class="my-3"></v-divider>
+          
+          <v-row>
             <v-col cols="12">
-              <v-card outlined>
-                <v-card-title>Projects ({{ clientProjects.length }})</v-card-title>
-                <v-card-text>
-                  <div v-if="clientProjects.length > 0">
-                    <v-list dense>
-                      <v-list-item v-for="project in clientProjects" :key="project.id">
-                        <v-list-item-icon>
-                          <v-icon :color="getStatusColor(project.status)">mdi-folder</v-icon>
-                        </v-list-item-icon>
-                        <v-list-item-content>
-                          <v-list-item-title>{{ project.name }}</v-list-item-title>
-                          <v-list-item-subtitle>
-                            {{ project.status }} | Budget: {{ formatCurrency(project.budget) }}
-                          </v-list-item-subtitle>
-                        </v-list-item-content>
-                      </v-list-item>
-                    </v-list>
-                  </div>
-                  <p v-else class="text-caption">No projects found for this client</p>
-                </v-card-text>
-              </v-card>
+              <div class="text-h6 mb-3">Projects</div>
+              <v-data-table
+                :headers="[
+                  { text: 'Project Name', value: 'name', sortable: true },
+                  { text: 'Status', value: 'status', sortable: true },
+                  { text: 'Budget', value: 'budget', sortable: true }
+                ]"
+                :items="clientProjects"
+                :items-per-page="5"
+                class="elevation-1"
+                :no-data-text="'No projects found for this client'"
+              >
+                <template v-slot:[`item.status`]="{ item }">
+                  <v-chip
+                    :color="getStatusColor(item.status)"
+                    text-color="white"
+                    small
+                  >
+                    {{ item.status }}
+                  </v-chip>
+                </template>
+                
+                <template v-slot:[`item.budget`]="{ item }">
+                  {{ formatCurrency(item.budget) }}
+                </template>
+              </v-data-table>
+              
+              <div class="d-flex justify-end mt-3">
+                <v-btn 
+                  color="primary" 
+                  outlined 
+                  @click="createProject(viewedClient)"
+                >
+                  <v-icon left>mdi-plus</v-icon>
+                  Create Project
+                </v-btn>
+              </div>
             </v-col>
           </v-row>
         </v-card-text>
-
+        
+        <v-divider></v-divider>
+        
         <v-card-actions>
+          <v-btn color="error" text @click="confirmDelete(viewedClient)">
+            <v-icon left>mdi-delete</v-icon>
+            Delete
+          </v-btn>
           <v-spacer></v-spacer>
-          <v-btn color="primary" text @click="createProject(viewedClient)">
-            <v-icon left>mdi-folder-plus</v-icon>
-            New Project
-          </v-btn>
-          <v-btn color="primary" text @click="editClient(viewedClient)">
-            Edit
-          </v-btn>
           <v-btn color="blue darken-1" text @click="dialogViewClient = false">
             Close
+          </v-btn>
+          <v-btn color="primary" @click="editClient(viewedClient)">
+            <v-icon left>mdi-pencil</v-icon>
+            Edit
           </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
-
+    
     <!-- Delete Confirmation Dialog -->
     <v-dialog v-model="dialogDeleteConfirm" max-width="500px">
       <v-card>
-        <v-card-title class="headline">Confirm Delete</v-card-title>
+        <v-card-title class="text-h5">Delete Client</v-card-title>
         <v-card-text>
-          Are you sure you want to delete this client? This action cannot be undone.
-          <div class="warning-text mt-3" v-if="clientProjects.length > 0">
-            <v-alert type="warning" text dense>
-              This client has {{ clientProjects.length }} active project(s). Deleting this client will affect these projects.
-            </v-alert>
-          </div>
+          Are you sure you want to delete the client "{{ viewedClient ? viewedClient.name : '' }}"?<br><br>
+          <span class="warning-text">This action cannot be undone.</span>
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="blue darken-1" text @click="dialogDeleteConfirm = false">
-            Cancel
-          </v-btn>
-          <v-btn color="red darken-1" text @click="deleteClient">
-            Delete
-          </v-btn>
+          <v-btn color="blue darken-1" text @click="closeDeleteDialog">Cancel</v-btn>
+          <v-btn color="error" text @click="deleteClient">Delete</v-btn>
+          <v-spacer></v-spacer>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -342,6 +352,8 @@
 </template>
 
 <script>
+import { clientService, projectService } from '@/services';
+
 export default {
   name: 'ClientsPage',
   data() {
@@ -362,137 +374,8 @@ export default {
         { text: 'Actions', value: 'actions', sortable: false, align: 'center' }
       ],
       
-      clients: [
-        {
-          id: '1',
-          name: 'Acme Corporation',
-          contactPerson: 'John Smith',
-          email: 'john@acmecorp.com',
-          phone: '(555) 123-4567',
-          address: {
-            street: '123 Main St',
-            city: 'Boston',
-            state: 'MA',
-            zipCode: '02110',
-            country: 'USA'
-          },
-          totalBudget: 250000,
-          notes: 'Key client for digital transformation initiatives',
-          isActive: true,
-          createdAt: '2023-01-15T12:00:00Z'
-        },
-        {
-          id: '2',
-          name: 'Globex Industries',
-          contactPerson: 'Jane Miller',
-          email: 'jane@globex.com',
-          phone: '(555) 987-6543',
-          address: {
-            street: '456 Commerce Ave',
-            city: 'Chicago',
-            state: 'IL',
-            zipCode: '60601',
-            country: 'USA'
-          },
-          totalBudget: 175000,
-          notes: 'Expanding to international markets in Q3',
-          isActive: true,
-          createdAt: '2023-02-20T12:00:00Z'
-        },
-        {
-          id: '3',
-          name: 'Initech',
-          contactPerson: 'Michael Bolton',
-          email: 'michael@initech.com',
-          phone: '(555) 456-7890',
-          address: {
-            street: '789 Tech Blvd',
-            city: 'Austin',
-            state: 'TX',
-            zipCode: '73301',
-            country: 'USA'
-          },
-          totalBudget: 85000,
-          notes: 'Focus on internal software tools',
-          isActive: true,
-          createdAt: '2023-03-05T12:00:00Z'
-        },
-        {
-          id: '4',
-          name: 'Umbrella Corp',
-          contactPerson: 'Albert Wesker',
-          email: 'wesker@umbrella.com',
-          phone: '(555) 789-0123',
-          address: {
-            street: '100 Research Dr',
-            city: 'Raccoon City',
-            state: 'WA',
-            zipCode: '98001',
-            country: 'USA'
-          },
-          totalBudget: 320000,
-          notes: 'Pharmaceutical division projects',
-          isActive: false,
-          createdAt: '2022-11-12T12:00:00Z'
-        },
-        {
-          id: '5',
-          name: 'Stark Industries',
-          contactPerson: 'Pepper Potts',
-          email: 'pepper@stark.com',
-          phone: '(555) 234-5678',
-          address: {
-            street: '200 Innovation Way',
-            city: 'Malibu',
-            state: 'CA',
-            zipCode: '90265',
-            country: 'USA'
-          },
-          totalBudget: 500000,
-          notes: 'Clean energy initiatives',
-          isActive: true,
-          createdAt: '2023-04-10T12:00:00Z'
-        }
-      ],
-      
-      // Sample projects for clients
-      projects: [
-        {
-          id: '1',
-          clientId: '1',
-          name: 'Website Redesign',
-          status: 'Active',
-          budget: 45000
-        },
-        {
-          id: '2',
-          clientId: '2',
-          name: 'Mobile App Development',
-          status: 'Active',
-          budget: 120000
-        },
-        {
-          id: '3',
-          clientId: '3',
-          name: 'Brand Strategy',
-          status: 'Completed',
-          budget: 35000
-        },
-        {
-          id: '4',
-          clientId: '1',
-          name: 'Data Migration',
-          status: 'On Hold',
-          budget: 28000
-        },
-        {
-          id: '5',
-          clientId: '2',
-          name: 'E-commerce Integration',
-          status: 'Active',
-          budget: 18000
-        }
-      ],
+      clients: [],
+      projects: [],
       
       editedIndex: -1,
       editedItem: {
@@ -537,6 +420,10 @@ export default {
     }
   },
   
+  created() {
+    this.fetchClients();
+  },
+  
   computed: {
     formTitle() {
       return this.editedIndex === -1 ? 'New Client' : 'Edit Client'
@@ -570,6 +457,61 @@ export default {
   },
   
   methods: {
+    // Fetch clients from API
+    async fetchClients() {
+      this.loading = true;
+      try {
+        const response = await clientService.getAllClients();
+        this.clients = response.data;
+        
+        // Fetch projects data for the clients
+        this.fetchProjects();
+      } catch (error) {
+        console.error('Error fetching clients:', error);
+        // Use mock data as fallback if API fails
+        this.loadMockData();
+      } finally {
+        this.loading = false;
+      }
+    },
+    
+    // Fetch projects data
+    async fetchProjects() {
+      try {
+        const response = await projectService.getAllProjects();
+        this.projects = response.data;
+      } catch (error) {
+        console.error('Error fetching projects:', error);
+        // Keep mock projects data as fallback
+      }
+    },
+    
+    // Load mock data (as fallback if API fails)
+    loadMockData() {
+      // This is only used if the API call fails
+      this.clients = [
+        {
+          id: '1',
+          name: 'Acme Corporation',
+          contactPerson: 'John Smith',
+          email: 'john@acmecorp.com',
+          phone: '(555) 123-4567',
+          address: {
+            street: '123 Main St',
+            city: 'Boston',
+            state: 'MA',
+            zipCode: '02110',
+            country: 'USA'
+          },
+          totalBudget: 250000,
+          notes: 'Key client for digital transformation initiatives',
+          isActive: true,
+          createdAt: '2023-01-15T12:00:00Z'
+        },
+        // Add other mock clients as needed
+      ];
+    },
+    
     // Format currency
     formatCurrency(value) {
       if (!value && value !== 0) return 'N/A';
@@ -589,8 +531,25 @@ export default {
     },
     
     // View client details
-    viewClient(item) {
+    async viewClient(item) {
       this.viewedClient = Object.assign({}, item);
+      
+      // Get client projects if not loaded yet
+      if (this.projects.length === 0) {
+        try {
+          const response = await clientService.getClientProjects(item.id);
+          const clientProjects = response.data;
+          if (clientProjects.length) {
+            // Add to existing projects
+            this.projects = [...this.projects, ...clientProjects.filter(p => 
+              !this.projects.some(existing => existing.id === p.id)
+            )];
+          }
+        } catch (error) {
+          console.error('Error fetching client projects:', error);
+        }
+      }
+      
       this.dialogViewClient = true;
     },
     
@@ -617,7 +576,6 @@ export default {
     // Create a new project for this client
     createProject(client) {
       // Navigate to projects page with client ID
-      // In a real app, this would navigate to projects page with client pre-selected
       this.$router.push('/projects?clientId=' + client.id);
       this.dialogViewClient = false;
     },
@@ -630,10 +588,17 @@ export default {
     },
     
     // Delete client
-    deleteClient() {
-      // In a real app, you would call the API to delete the client
-      this.clients.splice(this.editedIndex, 1);
-      this.closeDeleteDialog();
+    async deleteClient() {
+      try {
+        await clientService.deleteClient(this.viewedClient.id);
+        // Remove from local array after successful API call
+        this.clients.splice(this.editedIndex, 1);
+      } catch (error) {
+        console.error('Error deleting client:', error);
+        // Show error notification
+      } finally {
+        this.closeDeleteDialog();
+      }
     },
     
     // Close delete dialog
@@ -659,33 +624,29 @@ export default {
     },
     
     // Save client
-    saveClient() {
+    async saveClient() {
       if (!this.$refs.form.validate()) return;
       
-      // In a real app, you would call the API to save the client
-      if (this.editedIndex > -1) {
-        // Update existing client
-        Object.assign(this.clients[this.editedIndex], this.editedItem);
-      } else {
-        // Create new client
-        const newClient = Object.assign({}, this.editedItem);
-        
-        // Generate a simple ID (in a real app, this would come from the backend)
-        newClient.id = Math.random().toString(36).substring(2, 9);
-        
-        // Set created date
-        newClient.createdAt = new Date().toISOString();
-        
-        // Add to array
-        this.clients.push(newClient);
+      try {
+        if (this.editedIndex > -1) {
+          // Update existing client
+          const response = await clientService.updateClient(
+            this.editedItem.id, 
+            this.editedItem
+          );
+          // Update in the array
+          Object.assign(this.clients[this.editedIndex], response.data);
+        } else {
+          // Create new client
+          const response = await clientService.createClient(this.editedItem);
+          // Add to array
+          this.clients.push(response.data);
+        }
+        this.closeDialog();
+      } catch (error) {
+        console.error('Error saving client:', error);
+        // Show error notification
       }
-      
-      this.closeDialog();
-    },
-
-    // eslint-disable-next-line no-unused-vars
-    fetchResourceProjects(resourceId) {
-      // Method implementation...
     }
   }
 }

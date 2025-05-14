@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRMA Reports</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Roboto', sans-serif;
+        }
+        .report-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .report-card {
+            transition: all 0.3s;
+        }
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+        .chart-container {
+            height: 300px;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <v-app-bar app color="primary" dark>
+                <v-app-bar-nav-icon></v-app-bar-nav-icon>
+                <v-toolbar-title>I.R.M.A.</v-toolbar-title>
+                <v-spacer></v-spacer>
+                <v-btn icon>
+                  <v-icon>mdi-bell</v-icon>
+                </v-btn>
+                <v-btn icon>
+                  <v-icon>mdi-account-circle</v-icon>
+                </v-btn>
+            </v-app-bar>
+
+            <v-navigation-drawer app>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-list-item-title class="text-h6">
+                            Integrated Resource Management Application
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                            Welcome, Manager User
+                        </v-list-item-subtitle>
+                    </v-list-item-content>
+                </v-list-item>
+
+                <v-divider></v-divider>
+
+                <v-list dense nav>
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-home</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Home</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-calendar-clock</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Timesheets</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-folder</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Projects</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-group</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Clients</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link class="primary--text">
+                        <v-list-item-icon>
+                            <v-icon color="primary">mdi-chart-bar</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Reports</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-file-document</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Invoices</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-multiple</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Resources</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>User Management</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Settings</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+                </v-list>
+            </v-navigation-drawer>
+
+            <v-main>
+                <v-container fluid>
+                    <div class="report-header">
+                        <h1 class="text-h4">Reports & Analytics</h1>
+                        <v-btn color="primary">
+                            <v-icon left>mdi-plus</v-icon>
+                            CREATE CUSTOM REPORT
+                        </v-btn>
+                    </div>
+
+                    <v-tabs v-model="activeTab" background-color="transparent" grow>
+                        <v-tab>Dashboard</v-tab>
+                        <v-tab>Time Reports</v-tab>
+                        <v-tab>Budget Reports</v-tab>
+                        <v-tab>Resource Reports</v-tab>
+                        <v-tab>Scheduled Reports</v-tab>
+                    </v-tabs>
+
+                    <v-tabs-items v-model="activeTab">
+                        <!-- Dashboard Tab -->
+                        <v-tab-item>
+                            <v-row class="mt-4">
+                                <v-col cols="12" md="3">
+                                    <v-card class="report-card">
+                                        <v-card-text class="text-center">
+                                            <v-icon color="primary" size="48">mdi-clock-outline</v-icon>
+                                            <div class="text-h4 mt-2">168</div>
+                                            <div class="text-subtitle-1">Hours Logged This Month</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="12" md="3">
+                                    <v-card class="report-card">
+                                        <v-card-text class="text-center">
+                                            <v-icon color="success" size="48">mdi-currency-usd</v-icon>
+                                            <div class="text-h4 mt-2">$16,800</div>
+                                            <div class="text-subtitle-1">Revenue This Month</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="12" md="3">
+                                    <v-card class="report-card">
+                                        <v-card-text class="text-center">
+                                            <v-icon color="info" size="48">mdi-folder-multiple</v-icon>
+                                            <div class="text-h4 mt-2">5</div>
+                                            <div class="text-subtitle-1">Active Projects</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="12" md="3">
+                                    <v-card class="report-card">
+                                        <v-card-text class="text-center">
+                                            <v-icon color="warning" size="48">mdi-account-group</v-icon>
+                                            <div class="text-h4 mt-2">5</div>
+                                            <div class="text-subtitle-1">Active Clients</div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+
+                            <v-row class="mt-4">
+                                <v-col cols="12" md="8">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            Hours Logged by Project
+                                            <v-spacer></v-spacer>
+                                            <v-select
+                                                label="Time Period"
+                                                :items="['This Month', 'Last Month', 'This Quarter', 'This Year']"
+                                                dense
+                                                outlined
+                                                hide-details
+                                                style="max-width: 150px;"
+                                            ></v-select>
+                                        </v-card-title>
+                                        <v-card-text>
+                                            <div class="chart-container">
+                                                <!-- Placeholder for chart -->
+                                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
+                                                    <div style="text-align: center;">
+                                                        <v-icon size="64" color="primary">mdi-chart-bar</v-icon>
+                                                        <div class="mt-2">Bar Chart: Hours by Project</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="12" md="4">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            Revenue Distribution
+                                        </v-card-title>
+                                        <v-card-text>
+                                            <div class="chart-container">
+                                                <!-- Placeholder for chart -->
+                                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
+                                                    <div style="text-align: center;">
+                                                        <v-icon size="64" color="success">mdi-chart-pie</v-icon>
+                                                        <div class="mt-2">Pie Chart: Revenue by Client</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+
+                            <v-row class="mt-4">
+                                <v-col cols="12">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            Resource Utilization Trend
+                                            <v-spacer></v-spacer>
+                                            <v-select
+                                                label="Time Period"
+                                                :items="['Last 30 Days', 'Last 60 Days', 'Last 90 Days']"
+                                                dense
+                                                outlined
+                                                hide-details
+                                                style="max-width: 150px;"
+                                            ></v-select>
+                                        </v-card-title>
+                                        <v-card-text>
+                                            <div class="chart-container">
+                                                <!-- Placeholder for chart -->
+                                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; align-items: center; justify-content: center;">
+                                                    <div style="text-align: center;">
+                                                        <v-icon size="64" color="info">mdi-chart-line</v-icon>
+                                                        <div class="mt-2">Line Chart: Resource Utilization Over Time</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-tab-item>
+
+                        <!-- Time Reports Tab -->
+                        <v-tab-item>
+                            <v-row class="mt-4">
+                                <v-col cols="12" md="6">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            <v-icon left color="primary">mdi-file-document-outline</v-icon>
+                                            Time by Project
+                                        </v-card-title>
+                                        <v-card-subtitle>
+                                            Hours logged per project for the selected period
+                                        </v-card-subtitle>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Time Period"
+                                                        :items="['This Month', 'Last Month', 'This Quarter', 'Custom Range']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Group By"
+                                                        :items="['Project', 'Client', 'Resource']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn text color="primary">
+                                                <v-icon left>mdi-export</v-icon>
+                                                Export
+                                            </v-btn>
+                                            <v-btn color="primary">
+                                                Generate Report
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="12" md="6">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            <v-icon left color="primary">mdi-file-document-outline</v-icon>
+                                            Time by Resource
+                                        </v-card-title>
+                                        <v-card-subtitle>
+                                            Hours logged per resource for the selected period
+                                        </v-card-subtitle>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Time Period"
+                                                        :items="['This Month', 'Last Month', 'This Quarter', 'Custom Range']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Group By"
+                                                        :items="['Resource', 'Project', 'Day']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn text color="primary">
+                                                <v-icon left>mdi-export</v-icon>
+                                                Export
+                                            </v-btn>
+                                            <v-btn color="primary">
+                                                Generate Report
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                            <v-row class="mt-4">
+                                <v-col cols="12">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            <v-icon left color="primary">mdi-file-document-outline</v-icon>
+                                            Detailed Time Report
+                                        </v-card-title>
+                                        <v-card-subtitle>
+                                            Detailed breakdown of time entries with filtering options
+                                        </v-card-subtitle>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" md="3">
+                                                    <v-select
+                                                        label="Time Period"
+                                                        :items="['This Month', 'Last Month', 'This Quarter', 'Custom Range']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="3">
+                                                    <v-select
+                                                        label="Project"
+                                                        :items="['All Projects', 'Project Alpha', 'Project Beta']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="3">
+                                                    <v-select
+                                                        label="Client"
+                                                        :items="['All Clients', 'Test Client', 'ABC Corp', 'XYZ Inc']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="3">
+                                                    <v-select
+                                                        label="Resource"
+                                                        :items="['All Resources', 'John Smith', 'Jane Doe', 'Bob Johnson']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn text color="primary">
+                                                <v-icon left>mdi-export</v-icon>
+                                                Export
+                                            </v-btn>
+                                            <v-btn color="primary">
+                                                Generate Report
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-tab-item>
+
+                        <!-- Budget Reports Tab -->
+                        <v-tab-item>
+                            <v-row class="mt-4">
+                                <v-col cols="12" md="6">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            <v-icon left color="success">mdi-file-document-outline</v-icon>
+                                            Budget vs. Actual
+                                        </v-card-title>
+                                        <v-card-subtitle>
+                                            Compare budgeted hours/costs against actual values
+                                        </v-card-subtitle>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Project"
+                                                        :items="['All Projects', 'Project Alpha', 'Project Beta']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Metric"
+                                                        :items="['Hours', 'Cost', 'Both']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn text color="primary">
+                                                <v-icon left>mdi-export</v-icon>
+                                                Export
+                                            </v-btn>
+                                            <v-btn color="primary">
+                                                Generate Report
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="12" md="6">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            <v-icon left color="success">mdi-file-document-outline</v-icon>
+                                            Budget Forecast
+                                        </v-card-title>
+                                        <v-card-subtitle>
+                                            Projected budget utilization based on current burn rate
+                                        </v-card-subtitle>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Project"
+                                                        :items="['All Projects', 'Project Alpha', 'Project Beta']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Forecast Period"
+                                                        :items="['1 Month', '3 Months', '6 Months', 'To Completion']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn text color="primary">
+                                                <v-icon left>mdi-export</v-icon>
+                                                Export
+                                            </v-btn>
+                                            <v-btn color="primary">
+                                                Generate Report
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-tab-item>
+
+                        <!-- Resource Reports Tab -->
+                        <v-tab-item>
+                            <v-row class="mt-4">
+                                <v-col cols="12" md="6">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            <v-icon left color="info">mdi-file-document-outline</v-icon>
+                                            Resource Utilization
+                                        </v-card-title>
+                                        <v-card-subtitle>
+                                            Analyze resource utilization rates across projects
+                                        </v-card-subtitle>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Time Period"
+                                                        :items="['This Month', 'Last Month', 'This Quarter', 'Custom Range']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Resources"
+                                                        :items="['All Resources', 'Selected Resources']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn text color="primary">
+                                                <v-icon left>mdi-export</v-icon>
+                                                Export
+                                            </v-btn>
+                                            <v-btn color="primary">
+                                                Generate Report
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                                <v-col cols="12" md="6">
+                                    <v-card class="report-card">
+                                        <v-card-title>
+                                            <v-icon left color="info">mdi-file-document-outline</v-icon>
+                                            Resource Allocation
+                                        </v-card-title>
+                                        <v-card-subtitle>
+                                            View current and planned resource allocation
+                                        </v-card-subtitle>
+                                        <v-card-text>
+                                            <v-row>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="Time Period"
+                                                        :items="['Current Week', 'Next Week', 'Next Month', 'Custom Range']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                                <v-col cols="12" md="6">
+                                                    <v-select
+                                                        label="View Type"
+                                                        :items="['Calendar', 'Gantt Chart', 'Table']"
+                                                        outlined
+                                                        dense
+                                                    ></v-select>
+                                                </v-col>
+                                            </v-row>
+                                        </v-card-text>
+                                        <v-card-actions>
+                                            <v-spacer></v-spacer>
+                                            <v-btn text color="primary">
+                                                <v-icon left>mdi-export</v-icon>
+                                                Export
+                                            </v-btn>
+                                            <v-btn color="primary">
+                                                Generate Report
+                                            </v-btn>
+                                        </v-card-actions>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-tab-item>
+
+                        <!-- Scheduled Reports Tab -->
+                        <v-tab-item>
+                            <v-row class="mt-4">
+                                <v-col cols="12">
+                                    <v-card>
+                                        <v-card-title>
+                                            Scheduled Reports
+                                            <v-spacer></v-spacer>
+                                            <v-btn color="primary">
+                                                <v-icon left>mdi-plus</v-icon>
+                                                Schedule New Report
+                                            </v-btn>
+                                        </v-card-title>
+                                        <v-data-table
+                                            :headers="[
+                                                { text: 'Report Name', value: 'name' },
+                                                { text: 'Type', value: 'type' },
+                                                { text: 'Frequency', value: 'frequency' },
+                                                { text: 'Recipients', value: 'recipients' },
+                                                { text: 'Last Run', value: 'lastRun' },
+                                                { text: 'Next Run', value: 'nextRun' },
+                                                { text: 'Status', value: 'status' },
+                                                { text: 'Actions', value: 'actions', sortable: false }
+                                            ]"
+                                            :items="[
+                                                {
+                                                    name: 'Weekly Time Summary',
+                                                    type: 'Time Report',
+                                                    frequency: 'Weekly (Monday)',
+                                                    recipients: 'Management Team',
+                                                    lastRun: '2025-04-15',
+                                                    nextRun: '2025-04-22',
+                                                    status: 'Active'
+                                                },
+                                                {
+                                                    name: 'Monthly Budget Report',
+                                                    type: 'Budget Report',
+                                                    frequency: 'Monthly (1st)',
+                                                    recipients: 'Finance Team',
+                                                    lastRun: '2025-04-01',
+                                                    nextRun: '2025-05-01',
+                                                    status: 'Active'
+                                                },
+                                                {
+                                                    name: 'Project Alpha Status',
+                                                    type: 'Project Report',
+                                                    frequency: 'Weekly (Friday)',
+                                                    recipients: 'Project Team, Client',
+                                                    lastRun: '2025-04-12',
+                                                    nextRun: '2025-04-19',
+                                                    status: 'Active'
+                                                },
+                                                {
+                                                    name: 'Resource Forecast',
+                                                    type: 'Resource Report',
+                                                    frequency: 'Bi-weekly',
+                                                    recipients: 'Resource Managers',
+                                                    lastRun: '2025-04-10',
+                                                    nextRun: '2025-04-24',
+                                                    status: 'Paused'
+                                                }
+                                            ]"
+                                            :items-per-page="10"
+                                            class="elevation-1"
+                                        >
+                                            <template v-slot:item.status="{ item }">
+                                                <v-chip
+                                                    :color="item.status === 'Active' ? 'success' : 'grey'"
+                                                    small
+                                                >
+                                                    {{ item.status }}
+                                                </v-chip>
+                                            </template>
+                                            
+                                            <template v-slot:item.actions="{ item }">
+                                                <v-btn
+                                                    small
+                                                    icon
+                                                    color="primary"
+                                                    title="Run Now"
+                                                >
+                                                    <v-icon>mdi-play</v-icon>
+                                                </v-btn>
+                                                
+                                                <v-btn
+                                                    small
+                                                    icon
+                                                    color="info"
+                                                    title="Edit Schedule"
+                                                >
+                                                    <v-icon>mdi-pencil</v-icon>
+                                                </v-btn>
+                                                
+                                                <v-btn
+                                                    small
+                                                    icon
+                                                    color="error"
+                                                    title="Delete Schedule"
+                                                >
+                                                    <v-icon>mdi-delete</v-icon>
+                                                </v-btn>
+                                            </template>
+                                        </v-data-table>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-tab-item>
+                    </v-tabs-items>
+                </v-container>
+            </v-main>
+
+            <v-footer app>
+                <span>&copy; {{ new Date().getFullYear() }} IRMA - Integrated Resource Management Application</span>
+            </v-footer>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                activeTab: 0
+            },
+            vuetify: new Vuetify({
+                theme: {
+                    themes: {
+                        light: {
+                            primary: '#1976D2',
+                            secondary: '#424242',
+                            accent: '#82B1FF',
+                            error: '#FF5252',
+                            info: '#2196F3',
+                            success: '#4CAF50',
+                            warning: '#FFC107'
+                        }
+                    }
+                }
+            })
+        })
+    </script>
+</body>
+</html>

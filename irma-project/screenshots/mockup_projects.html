@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IRMA Projects</title>
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Roboto', sans-serif;
+        }
+        .project-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .budget-progress {
+            width: 100%;
+        }
+        .budget-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            margin-top: 4px;
+        }
+        .project-card {
+            transition: all 0.3s;
+        }
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+            <v-app-bar app color="primary" dark>
+                <v-app-bar-nav-icon></v-app-bar-nav-icon>
+                <v-toolbar-title>I.R.M.A.</v-toolbar-title>
+                <v-spacer></v-spacer>
+                <v-btn icon>
+                  <v-icon>mdi-bell</v-icon>
+                </v-btn>
+                <v-btn icon>
+                  <v-icon>mdi-account-circle</v-icon>
+                </v-btn>
+            </v-app-bar>
+
+            <v-navigation-drawer app>
+                <v-list-item>
+                    <v-list-item-content>
+                        <v-list-item-title class="text-h6">
+                            Integrated Resource Management Application
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                            Welcome, Manager User
+                        </v-list-item-subtitle>
+                    </v-list-item-content>
+                </v-list-item>
+
+                <v-divider></v-divider>
+
+                <v-list dense nav>
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-home</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Home</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-calendar-clock</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Timesheets</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link class="primary--text">
+                        <v-list-item-icon>
+                            <v-icon color="primary">mdi-folder</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Projects</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-group</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Clients</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-chart-bar</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Reports</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-file-document</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Invoices</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-multiple</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Resources</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-account-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>User Management</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+
+                    <v-list-item link>
+                        <v-list-item-icon>
+                            <v-icon>mdi-cog</v-icon>
+                        </v-list-item-icon>
+                        <v-list-item-content>
+                            <v-list-item-title>Settings</v-list-item-title>
+                        </v-list-item-content>
+                    </v-list-item>
+                </v-list>
+            </v-navigation-drawer>
+
+            <v-main>
+                <v-container fluid>
+                    <div class="project-header">
+                        <h1 class="text-h4">Projects</h1>
+                        <v-btn color="primary">
+                            <v-icon left>mdi-plus</v-icon>
+                            ADD PROJECT
+                        </v-btn>
+                    </div>
+
+                    <v-card class="mb-6">
+                        <v-card-title>
+                            <v-text-field
+                                v-model="search"
+                                append-icon="mdi-magnify"
+                                label="Search projects"
+                                single-line
+                                hide-details
+                                outlined
+                                dense
+                                class="mr-4"
+                            ></v-text-field>
+                            <v-spacer></v-spacer>
+                            <v-select
+                                label="Filter by Client"
+                                outlined
+                                dense
+                                hide-details
+                                class="mx-2"
+                                style="max-width: 200px;"
+                            ></v-select>
+                            <v-select
+                                label="Filter by Status"
+                                outlined
+                                dense
+                                hide-details
+                                class="mx-2"
+                                style="max-width: 200px;"
+                            ></v-select>
+                        </v-card-title>
+                        
+                        <v-data-table
+                            :headers="[
+                                { text: 'Name', value: 'name' },
+                                { text: 'Client', value: 'client' },
+                                { text: 'Budget', value: 'budget' },
+                                { text: 'Budget Remaining', value: 'budgetRemaining' },
+                                { text: 'Status', value: 'status' },
+                                { text: 'Actions', value: 'actions', sortable: false }
+                            ]"
+                            :items="[
+                                {
+                                    name: 'Project Alpha',
+                                    client: 'Test Client',
+                                    budget: '$10,000.00',
+                                    budgetRemaining: '$7,500.00',
+                                    status: 'Active',
+                                    progress: 75
+                                },
+                                {
+                                    name: 'Project Beta',
+                                    client: 'Test Client',
+                                    budget: '$5,000.00',
+                                    budgetRemaining: '$3,500.00',
+                                    status: 'Active',
+                                    progress: 70
+                                },
+                                {
+                                    name: 'Website Redesign',
+                                    client: 'ABC Corp',
+                                    budget: '$15,000.00',
+                                    budgetRemaining: '$2,000.00',
+                                    status: 'At Risk',
+                                    progress: 13
+                                },
+                                {
+                                    name: 'Mobile App Development',
+                                    client: 'XYZ Inc',
+                                    budget: '$25,000.00',
+                                    budgetRemaining: '$18,750.00',
+                                    status: 'Active',
+                                    progress: 75
+                                },
+                                {
+                                    name: 'Marketing Campaign',
+                                    client: 'Global Solutions',
+                                    budget: '$8,000.00',
+                                    budgetRemaining: '$0.00',
+                                    status: 'Completed',
+                                    progress: 100
+                                }
+                            ]"
+                            :items-per-page="10"
+                            class="elevation-1"
+                        >
+                            <template v-slot:item.budgetRemaining="{ item }">
+                                <div>
+                                    {{ item.budgetRemaining }}
+                                    <v-progress-linear
+                                        :value="item.progress"
+                                        :color="getBudgetColor(item.progress)"
+                                        height="5"
+                                        class="budget-progress"
+                                    ></v-progress-linear>
+                                    <div class="budget-text">
+                                        <span>0%</span>
+                                        <span>{{ item.progress }}%</span>
+                                        <span>100%</span>
+                                    </div>
+                                </div>
+                            </template>
+                            
+                            <template v-slot:item.status="{ item }">
+                                <v-chip
+                                    :color="getStatusColor(item.status)"
+                                    small
+                                >
+                                    {{ item.status }}
+                                </v-chip>
+                            </template>
+                            
+                            <template v-slot:item.actions="{ item }">
+                                <v-btn
+                                    small
+                                    icon
+                                    color="info"
+                                    title="View Project"
+                                >
+                                    <v-icon>mdi-eye</v-icon>
+                                </v-btn>
+                                
+                                <v-btn
+                                    small
+                                    icon
+                                    color="primary"
+                                    title="Edit Project"
+                                >
+                                    <v-icon>mdi-pencil</v-icon>
+                                </v-btn>
+                                
+                                <v-btn
+                                    small
+                                    icon
+                                    color="error"
+                                    title="Delete Project"
+                                >
+                                    <v-icon>mdi-delete</v-icon>
+                                </v-btn>
+                            </template>
+                        </v-data-table>
+                    </v-card>
+
+                    <h2 class="text-h5 mb-4">Project Overview</h2>
+                    <v-row>
+                        <v-col cols="12" md="4">
+                            <v-card class="project-card">
+                                <v-img
+                                    src="https://picsum.photos/id/3/500/200"
+                                    height="150"
+                                    class="white--text align-end"
+                                >
+                                    <v-card-title>Project Alpha</v-card-title>
+                                </v-img>
+                                <v-card-subtitle>
+                                    <v-chip color="success" x-small class="mr-1">Active</v-chip>
+                                    Test Client
+                                </v-card-subtitle>
+                                <v-card-text>
+                                    <div class="mb-2">
+                                        <strong>Budget:</strong> $10,000.00
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Remaining:</strong> $7,500.00
+                                        <v-progress-linear
+                                            value="75"
+                                            color="success"
+                                            height="8"
+                                            class="mt-1"
+                                        ></v-progress-linear>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Team:</strong> 4 members
+                                    </div>
+                                    <div>
+                                        <strong>Deadline:</strong> June 30, 2025
+                                    </div>
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-btn text color="primary">
+                                        View Details
+                                    </v-btn>
+                                    <v-spacer></v-spacer>
+                                    <v-btn icon>
+                                        <v-icon>mdi-dots-vertical</v-icon>
+                                    </v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </v-col>
+                        
+                        <v-col cols="12" md="4">
+                            <v-card class="project-card">
+                                <v-img
+                                    src="https://picsum.photos/id/24/500/200"
+                                    height="150"
+                                    class="white--text align-end"
+                                >
+                                    <v-card-title>Project Beta</v-card-title>
+                                </v-img>
+                                <v-card-subtitle>
+                                    <v-chip color="success" x-small class="mr-1">Active</v-chip>
+                                    Test Client
+                                </v-card-subtitle>
+                                <v-card-text>
+                                    <div class="mb-2">
+                                        <strong>Budget:</strong> $5,000.00
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Remaining:</strong> $3,500.00
+                                        <v-progress-linear
+                                            value="70"
+                                            color="success"
+                                            height="8"
+                                            class="mt-1"
+                                        ></v-progress-linear>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Team:</strong> 2 members
+                                    </div>
+                                    <div>
+                                        <strong>Deadline:</strong> May 15, 2025
+                                    </div>
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-btn text color="primary">
+                                        View Details
+                                    </v-btn>
+                                    <v-spacer></v-spacer>
+                                    <v-btn icon>
+                                        <v-icon>mdi-dots-vertical</v-icon>
+                                    </v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </v-col>
+                        
+                        <v-col cols="12" md="4">
+                            <v-card class="project-card">
+                                <v-img
+                                    src="https://picsum.photos/id/42/500/200"
+                                    height="150"
+                                    class="white--text align-end"
+                                >
+                                    <v-card-title>Website Redesign</v-card-title>
+                                </v-img>
+                                <v-card-subtitle>
+                                    <v-chip color="error" x-small class="mr-1">At Risk</v-chip>
+                                    ABC Corp
+                                </v-card-subtitle>
+                                <v-card-text>
+                                    <div class="mb-2">
+                                        <strong>Budget:</strong> $15,000.00
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Remaining:</strong> $2,000.00
+                                        <v-progress-linear
+                                            value="13"
+                                            color="error"
+                                            height="8"
+                                            class="mt-1"
+                                        ></v-progress-linear>
+                                    </div>
+                                    <div class="mb-2">
+                                        <strong>Team:</strong> 5 members
+                                    </div>
+                                    <div>
+                                        <strong>Deadline:</strong> April 30, 2025
+                                    </div>
+                                </v-card-text>
+                                <v-card-actions>
+                                    <v-btn text color="primary">
+                                        View Details
+                                    </v-btn>
+                                    <v-spacer></v-spacer>
+                                    <v-btn icon>
+                                        <v-icon>mdi-dots-vertical</v-icon>
+                                    </v-btn>
+                                </v-card-actions>
+                            </v-card>
+                        </v-col>
+                    </v-row>
+                </v-container>
+            </v-main>
+
+            <v-footer app>
+                <span>&copy; {{ new Date().getFullYear() }} IRMA - Integrated Resource Management Application</span>
+            </v-footer>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                search: ''
+            },
+            methods: {
+                getBudgetColor(progress) {
+                    if (progress < 25) return 'error';
+                    if (progress < 50) return 'warning';
+                    return 'success';
+                },
+                getStatusColor(status) {
+                    switch (status) {
+                        case 'Active': return 'success';
+                        case 'On Hold': return 'warning';
+                        case 'At Risk': return 'error';
+                        case 'Completed': return 'info';
+                        default: return 'grey';
+                    }
+                }
+            },
+            vuetify: new Vuetify({
+                theme: {
+                    themes: {
+                        light: {
+                            primary: '#1976D2',
+                            secondary: '#424242',
+                            accent: '#82B1FF',
+                            error: '#FF5252',
+                            info: '#2196F3',
+                            success: '#4CAF50',
+                            warning: '#FFC107'
+                        }
+                    }
+                }
+            })
+        })
+    </script>
+</body>
+</html>

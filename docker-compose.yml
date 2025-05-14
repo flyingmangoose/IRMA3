@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  # MongoDB Service
+  mongo:
+    image: mongo:6
+    container_name: irma-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=irma
+    networks:
+      - irma-network
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: irma-backend
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongo
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/irma
+      - JWT_SECRET=irma_secret_key_change_in_production
+      - JWT_EXPIRE=30d
+    networks:
+      - irma-network
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: irma-frontend
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - irma-network
+
+networks:
+  irma-network:
+    driver: bridge
+
+volumes:
+  mongo-data: 
