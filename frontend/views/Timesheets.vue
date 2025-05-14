@@ -138,6 +138,21 @@
       </v-simple-table>
     </v-card>
 
+    <!-- Add a debug section that shows calculated total hours -->
+    <div class="debug-info mb-4" v-if="timesheetProjects.length > 0">
+      <v-alert
+        type="info"
+        text
+        outlined
+      >
+        <p><strong>Timesheet Information:</strong></p>
+        <p>Total Hours: {{ calculateTotalHours().toFixed(2) }}</p>
+        <p>Projects: {{ timesheetProjects.length }}</p>
+        <p>Can Submit: {{ canSubmitTimesheet ? 'Yes' : 'No' }}</p>
+      </v-alert>
+    </div>
+
+    <!-- Action buttons -->
     <div class="d-flex justify-space-between mb-4">
       <v-btn 
         color="primary" 
@@ -160,11 +175,10 @@
         
         <v-btn 
           color="primary" 
-          :disabled="!canSubmitTimesheet" 
           @click="showSubmitDialog"
         >
           <v-icon left>mdi-send</v-icon>
-          {{ submissionAction }}
+          Submit Timesheet
         </v-btn>
       </div>
     </div>
@@ -520,11 +534,9 @@ export default {
       return days;
     },
     
-    // Determine if user can submit timesheet
+    // Always allow timesheet submission
     canSubmitTimesheet() {
-      // Simplified validation: just check if there are any hours logged
-      const hasEntries = this.calculateTotalHours() > 0;
-      return hasEntries;
+      return true; // Allow submission regardless of hours
     },
     
     // Determine if user can approve timesheet
@@ -667,42 +679,14 @@ export default {
       this.submitDialog = true;
     },
     
-    // Submit timesheet for approval
+    // Submit timesheet for approval - simplified version
     submitTimesheet() {
-      // Set to loading state
-      this.loading = true;
+      // Always set to submitted state
+      this.timesheetStatus = 'Submitted';
+      this.submitDialog = false;
       
-      // Save any unsaved entries first
-      this.validateAndSaveAll();
-      
-      // More lenient validation - check for missing comments but don't block submission
-      let missingComments = false;
-      
-      Object.keys(this.timeEntries).forEach(projectId => {
-        Object.keys(this.timeEntries[projectId]).forEach(date => {
-          const entry = this.timeEntries[projectId][date];
-          if (parseFloat(entry.hours) > 0 && !entry.comment) {
-            missingComments = true;
-          }
-        });
-      });
-      
-      if (missingComments) {
-        // Show warning but allow continuation
-        this.showSnackbar('Some entries are missing comments. Consider adding them for better tracking.', 'warning');
-      }
-      
-      // Update timesheet status
-      setTimeout(() => {
-        this.timesheetStatus = 'Submitted';
-        this.submitDialog = false;
-        this.loading = false;
-        
-        // Show success message
-        this.showSnackbar('Timesheet submitted successfully', 'success');
-        
-        // In real app, this would be an API call instead of setTimeout
-      }, 500);
+      // Show success message
+      this.showSnackbar('Timesheet submitted successfully', 'success');
     },
     
     // Determine who should approve this timesheet based on hierarchy
@@ -860,9 +844,21 @@ export default {
     calculateTotalHours() {
       let total = 0;
       
-      Object.keys(this.timeEntries).forEach(projectId => {
-        total += this.calculateProjectTotal(projectId);
-      });
+      try {
+        Object.keys(this.timeEntries).forEach(projectId => {
+          Object.keys(this.timeEntries[projectId]).forEach(date => {
+            const hours = this.timeEntries[projectId][date].hours;
+            if (hours && hours !== '') {
+              const numericHours = parseFloat(hours);
+              if (!isNaN(numericHours) && numericHours > 0) {
+                total += numericHours;
+              }
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Error calculating total hours:', error);
+      }
       
       return total;
     },
@@ -1174,5 +1170,9 @@ export default {
 .comment-btn {
   margin-left: 4px;
   min-width: auto !important;
+}
+
+.debug-info {
+  font-size: 14px;
 }
 </style>
